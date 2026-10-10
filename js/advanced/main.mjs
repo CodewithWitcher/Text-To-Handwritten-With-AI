@@ -399,6 +399,7 @@ function footerText() {
 
 function initProfile() {
   const onProfileChange = () => {
+    refreshAutoTitle();
     frontPage && frontPage.redraw();
     renderStylePreview();
     refreshCourseBar();
@@ -876,7 +877,48 @@ function refreshCourseBar() {
   );
 }
 
+/**
+ * The standard assignment title: subject (course code) – programme,
+ * semester, e.g. "Design and Analysis of Algorithms (MCS-211) – MCA_NEW,
+ * 1st Semester". Parts that aren't known are left out.
+ */
+function standardTitle() {
+  const subject = String(
+    draft.docInfo.subject || fieldValue('subject') || ''
+  ).trim();
+  const code = String(fieldValue('subjectCode') || '').trim();
+  const programme = String(
+    fieldValue('programmeCode') || fieldValue('course') || ''
+  ).trim();
+  let sem = String(fieldValue('semester') || '').trim();
+  if (/^\d+$/.test(sem)) {
+    const n = Number(sem);
+    const suffix =
+      n % 100 >= 11 && n % 100 <= 13
+        ? 'th'
+        : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th';
+    sem = `${n}${suffix} Semester`;
+  } else if (sem && !/sem|year/i.test(sem)) {
+    sem = `${sem} Semester`;
+  }
+  const head = [subject, code && `(${code})`].filter(Boolean).join(' ');
+  const tail = [programme, sem].filter(Boolean).join(', ');
+  return [head, tail].filter(Boolean).join(' – ');
+}
+
+/** Keeps the title in the standard form unless the user typed their own. */
+function refreshAutoTitle() {
+  if (!draft || draft.docInfo.titleCustom) return;
+  const title = standardTitle();
+  if (!title || title === draft.docInfo.title) return;
+  draft.docInfo.title = title;
+  const input = $('#doc-title');
+  if (input) input.value = title;
+  saveDraft();
+}
+
 function onFrontValuesChanged() {
+  refreshAutoTitle();
   refreshCourseBar();
   frontPage && frontPage.redraw();
   renderStylePreview();
@@ -1024,9 +1066,16 @@ function initContent() {
     input.value = draft.docInfo[key] || '';
     input.addEventListener('input', () => {
       draft.docInfo[key] = input.value;
+      // A typed title is kept; clearing the box brings the standard back.
+      if (key === 'title') draft.docInfo.titleCustom = !!input.value.trim();
       saveDraft();
+      if (key === 'subject') refreshAutoTitle();
     });
   }
+  $('#doc-title').addEventListener('change', () => {
+    if (!draft.docInfo.titleCustom) refreshAutoTitle();
+  });
+  refreshAutoTitle();
 
   const paperText = () =>
     draft.source === 'paste' ? draft.pasteText : draft.pdfText;
@@ -1035,8 +1084,9 @@ function initContent() {
     // (a), (b), (c)... become questions of their own, each with an answer.
     draft.questions = splitSubQuestions(res.questions);
     draft.answers = {};
-    // The paper's own title/subject/instructions win over older values.
-    for (const key of ['title', 'subject', 'instructions']) {
+    // The paper's own subject/instructions win over older values. The title
+    // is built in the standard form (subject (code) – programme, semester).
+    for (const key of ['subject', 'instructions']) {
       if (res[key]) {
         draft.docInfo[key] = res[key];
         $(`#doc-${key}`).value = res[key];
@@ -1045,6 +1095,15 @@ function initContent() {
     if (!draft.docInfo.subject && getProfile().values.subject) {
       draft.docInfo.subject = getProfile().values.subject;
       $('#doc-subject').value = draft.docInfo.subject;
+    }
+    if (!draft.docInfo.titleCustom) {
+      draft.docInfo.title = '';
+      refreshAutoTitle();
+      // Nothing known yet for the standard title: use the paper's own.
+      if (!draft.docInfo.title && res.title) {
+        draft.docInfo.title = res.title;
+        $('#doc-title').value = res.title;
+      }
     }
     saveDraft();
     renderQuestions();
