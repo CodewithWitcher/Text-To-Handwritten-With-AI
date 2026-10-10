@@ -1,0 +1,97 @@
+name: "🖨️ PDF or page rendering problem"
+description: Blank or missing pages, cut-off text, wrong page breaks, or the PDF / images won't download.
+title: "[PDF]: "
+labels: ["pdf", "needs-triage"]
+body:
+  - type: checkboxes
+    id: problems
+    attributes:
+      label: What went wrong? (tick all that apply)
+      options:
+        - label: Pages in the PDF are blank or missing text
+        - label: The front page is missing from the PDF
+        - label: Text is cut off at the bottom or side of a page
+        - label: A heading is left alone at the bottom of a page
+        - label: Too many / too few pages
+        - label: The PDF or images don't download
+        - label: The preview looks different from the downloaded PDF
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened?
+      placeholder: "Pages 2 and 3 of the PDF are empty, the preview showed text on them."
+    validations:
+      required: true
+  - type: dropdown
+    id: settings
+    attributes:
+      label: Resolution setting
+      options:
+        - Low (smaller PDF)
+        - Normal
+        - High
+        - Not sure
+  - type: input
+    id: pages
+    attributes:
+      label: Roughly how many pages?
+      placeholder: "9"
+  - type: textarea
+    id: files
+    attributes:
+      label: Screenshot of the preview and the PDF (or the PDF itself)
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Brave
+        - Other (mention below)
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Windows laptop / PC
+        - Mac
+        - Linux
+        - Android phone / tablet
+        - iPhone / iPad
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Errors in the browser console (optional)
+      description: On a computer, press F12 (or Cmd+Option+J on Mac), open the **Console** tab and paste any red errors here.
+      render: text
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Privacy:** before attaching any file, remove your name, roll/enrolment number, phone, email and address. Never paste an API key.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

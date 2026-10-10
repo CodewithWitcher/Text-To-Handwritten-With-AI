@@ -1,0 +1,79 @@
+name: "❓ Questions not found in my paper"
+description: Find questions misses questions, merges or splits them, gets marks wrong, or misses the course code / assignment number.
+title: "[Questions]: "
+labels: ["question-paper", "needs-triage"]
+body:
+  - type: input
+    id: course
+    attributes:
+      label: University and course code
+      placeholder: IGNOU MCS-211 (July 2026 session)
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: Which button did you use?
+      options:
+        - Find questions (no AI)
+        - Find questions (AI)
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: How did you give the questions?
+      options:
+        - Uploaded a PDF with selectable text
+        - Uploaded a scanned / photographed PDF
+        - Pasted the questions
+    validations:
+      required: true
+  - type: checkboxes
+    id: problems
+    attributes:
+      label: What went wrong? (tick all that apply)
+      options:
+        - label: Some questions were missed
+        - label: Instructions or notes were treated as questions
+        - label: Two questions were merged into one, or one was split
+        - label: Sub-parts (a), (b), (c) are wrong
+        - label: Marks are missing or wrong
+        - label: Course code / title / assignment number not detected (or wrong) in the pop-up
+        - label: Strange characters or garbled text (formulas, symbols)
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Which question numbers were affected, and what should they have been?
+      placeholder: "Found 3 questions, the paper has 4. Q2 and Q3 were merged."
+    validations:
+      required: true
+  - type: textarea
+    id: paper
+    attributes:
+      label: The question paper
+      description: Attach the PDF, or paste its text. Question papers are public, but remove anything personal.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

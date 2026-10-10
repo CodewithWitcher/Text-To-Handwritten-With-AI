@@ -1,0 +1,119 @@
+name: "🐛 Something on the website is broken"
+description: A button, page or step doesn't work, shows an error, or behaves strangely.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! For problems with a specific part, the other forms (front page, questions, AI, PDF, handwriting) ask better questions.
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode?
+      options:
+        - Classic
+        - Advanced (AI)
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Step 1 – Template & handwriting
+        - Step 2 – Front page
+        - Step 3 – Questions & answers
+        - Step 4 – Preview & download
+        - My Profile / My Courses
+        - AI Settings
+        - Templates tab
+        - Classic mode converter
+        - Somewhere else (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe what went wrong.
+      placeholder: When I click "Render pages", nothing happens and the button stays grey.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Advanced mode
+        2. Paste questions and click "Find questions (no AI)"
+        3. Click "Render pages"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Brave
+        - Other (mention below)
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Windows laptop / PC
+        - Mac
+        - Linux
+        - Android phone / tablet
+        - iPhone / iPad
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Errors in the browser console (optional)
+      description: On a computer, press F12 (or Cmd+Option+J on Mac), open the **Console** tab and paste any red errors here.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag and drop images or a short video here.
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Privacy:** before attaching any file, remove your name, roll/enrolment number, phone, email and address. Never paste an API key.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

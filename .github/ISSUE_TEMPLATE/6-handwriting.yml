@@ -1,0 +1,84 @@
+name: "✍️ Handwriting, font or layout problem"
+description: A font doesn't load or looks wrong, text sits off the ruled lines, or headings / spacing look bad.
+title: "[Handwriting]: "
+labels: ["handwriting", "needs-triage"]
+body:
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode?
+      options:
+        - Classic
+        - Advanced (AI)
+    validations:
+      required: true
+  - type: input
+    id: font
+    attributes:
+      label: Font used
+      placeholder: Dave Mergens / Caveat / my own uploaded .ttf
+    validations:
+      required: true
+  - type: checkboxes
+    id: problems
+    attributes:
+      label: What looks wrong? (tick all that apply)
+      options:
+        - label: The font doesn't load (looks like a normal computer font)
+        - label: My uploaded font doesn't work
+        - label: Text doesn't sit on the ruled lines
+        - label: Letters overlap or have big gaps
+        - label: Headings, underlines or bullets look wrong
+        - label: Hindi / other language text doesn't display correctly
+  - type: textarea
+    id: details
+    attributes:
+      label: Describe it, with a screenshot
+      description: A screenshot of the page makes this much faster to fix.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Brave
+        - Other (mention below)
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Windows laptop / PC
+        - Mac
+        - Linux
+        - Android phone / tablet
+        - iPhone / iPad
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

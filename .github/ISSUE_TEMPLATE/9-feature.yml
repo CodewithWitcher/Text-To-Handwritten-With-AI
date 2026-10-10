@@ -1,0 +1,37 @@
+name: "✨ Feature request"
+description: Suggest an idea or improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      placeholder: "I always have to change the date on every front page by hand."
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      options:
+        - Classic mode
+        - Templates & handwriting
+        - Front page
+        - Questions & answers
+        - AI providers
+        - PDF / download
+        - Profile & courses
+        - Installation / running locally
+        - Something new
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, examples or links.

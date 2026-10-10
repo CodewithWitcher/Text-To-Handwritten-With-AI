@@ -1,0 +1,58 @@
+name: "💻 Can't install or run it"
+description: Problems with npx, pipx / uvx / pip, or running from source.
+title: "[Install]: "
+labels: ["install", "needs-triage"]
+body:
+  - type: dropdown
+    id: method
+    attributes:
+      label: How did you try to run it?
+      options:
+        - npx text-to-handwriting-ai
+        - pipx run text-to-handwriting-ai
+        - uvx text-to-handwriting-ai
+        - pip install text-to-handwriting-ai
+        - npm start (from source)
+        - python3 server.py (from source)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Node or Python version
+      description: Run `node -v` or `python3 --version` and paste the result.
+      placeholder: "v20.11.0  /  Python 3.11.6"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: The full command and everything it printed
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else?
+      placeholder: "The server starts but the browser shows a blank page."
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

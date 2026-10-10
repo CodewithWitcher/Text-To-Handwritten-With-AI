@@ -4,9 +4,9 @@ Thanks for helping. This guide covers how to set up the project, what we expect 
 
 ## Ways to help
 
-- **Report a bug.** Open an issue with the *Bug report* template.
-- **Send a front page that isn't detected well.** Attach the blank page (remove any personal details) and say which fields were missed or misplaced. This is the most useful report we get.
-- **Send a question paper that is parsed badly.** Attach it or paste its text, and say what went wrong (missed questions, wrong marks).
+- **Report a bug.** Click [New issue](https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/issues/new/choose) and pick the form that matches the problem: website, front page, questions, AI, PDF, handwriting or installation. Each form asks exactly what we need to find the cause.
+- **Send a front page that isn't detected well** (use the *Front page not filled correctly* form). Attach the blank page (remove any personal details) and say which fields were missed or misplaced. This is the most useful report we get.
+- **Send a question paper that is parsed badly** (use the *Questions not found in my paper* form). Attach it or paste its text, and say what went wrong (missed questions, wrong marks).
 - **Add or improve a template.** Templates live in `js/advanced/templates.mjs`.
 - **Fix an issue.** Issues labelled `good first issue` are a good place to start.
 

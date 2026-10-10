@@ -1,0 +1,86 @@
+name: "📄 Front page not filled correctly"
+description: Auto-detect / Smart detect misses a blank, writes in the wrong place, or uses the wrong value.
+title: "[Front page]: "
+labels: ["front-page", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The most helpful thing you can attach is the **blank** front page (before filling). Every layout you send makes detection better for everyone at your university.
+  - type: input
+    id: university
+    attributes:
+      label: University / college
+      placeholder: IGNOU, Delhi University, AKTU…
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: Which detection did you use?
+      options:
+        - Auto-detect fields (OCR, no AI)
+        - Smart detect (AI)
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Front page file type
+      options:
+        - PDF
+        - Image (JPG / PNG)
+        - Photo taken with a phone
+        - Scanned page
+    validations:
+      required: true
+  - type: checkboxes
+    id: problems
+    attributes:
+      label: What went wrong? (tick all that apply)
+      options:
+        - label: Some blanks were not found
+        - label: Text is written in the wrong place (too high, too low, overlapping the label)
+        - label: The wrong value went into a field (e.g. course code in the name field)
+        - label: Something was written where there is no blank (e.g. on the title or logo)
+        - label: Text is too big / too small or runs past the line
+        - label: The date slots ( __ / __ / ____ ) were filled wrongly
+  - type: textarea
+    id: fields
+    attributes:
+      label: Which fields had the problem?
+      placeholder: "Programme Code and Study Centre were not detected. Address went on the logo."
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Blank front page + screenshot of the result
+      description: Attach the empty front page and a screenshot of what the app produced.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Privacy:** before attaching any file, remove your name, roll/enrolment number, phone, email and address. Never paste an API key.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

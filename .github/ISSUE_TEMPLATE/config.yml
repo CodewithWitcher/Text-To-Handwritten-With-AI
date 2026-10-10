@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a security problem
+  - name: 🔒 Report a security problem
     url: https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/security/advisories/new
     about: Please report vulnerabilities privately, not as a public issue.
-  - name: Use the app online
+  - name: 🌐 Use the app online
     url: https://codewithwitcher.github.io/Text-To-Handwritten-With-AI/
     about: Try the hosted version before reporting a setup problem.

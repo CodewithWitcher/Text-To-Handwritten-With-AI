@@ -1,0 +1,110 @@
+name: "🤖 AI answers / API key problem"
+description: Test connection fails, answers don't generate, are cut off, or come out in the wrong format.
+title: "[AI]: "
+labels: ["ai", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 🔑 **Never paste your API key** in an issue. If you did by accident, delete the issue and create a new key with your provider.
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider
+      options:
+        - Claude (Anthropic)
+        - DeepSeek
+        - OpenAI
+        - Google Gemini
+        - OpenRouter
+        - Groq
+        - Ollama (local)
+        - Custom (OpenAI-compatible)
+        - No AI – copy-paste workflow
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model name
+      placeholder: deepseek-chat, claude-opus-5-5, gpt-4o-mini…
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What's the problem?
+      options:
+        - "Test connection fails"
+        - "Find questions (AI) fails"
+        - "Answers don't generate / stop part-way"
+        - "Answers are cut off"
+        - "Answers have stray symbols (*, #, `) on the pages"
+        - "Answers are too short / too long for the marks"
+        - "Answers are in the wrong language or off-topic"
+        - "Copy prompt / Import answers doesn't work"
+        - "Something else"
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Exact error message
+      description: Copy the message shown under the button (the line starting with ✗).
+      placeholder: "✗ The API key was rejected (401)…"
+      render: text
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: How are you running it?
+      options:
+        - Online website (GitHub Pages)
+        - npx text-to-handwriting-ai
+        - pipx / uvx / pip (Python)
+        - From source (npm start / python3 server.py)
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Brave
+        - Other (mention below)
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Windows laptop / PC
+        - Mac
+        - Linux
+        - Android phone / tablet
+        - iPhone / iPad
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Errors in the browser console (optional)
+      description: On a computer, press F12 (or Cmd+Option+J on Mac), open the **Console** tab and paste any red errors here.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet.
+          required: true
+        - label: I removed personal details and API keys from everything I attached.
+          required: true

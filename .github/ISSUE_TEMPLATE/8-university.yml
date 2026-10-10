@@ -1,0 +1,37 @@
+name: "🏫 Add support for my university or course"
+description: Ask us to support a front-page layout, a question-paper format, or an assignment template used at your university.
+title: "[Support request]: "
+labels: ["university-support", "enhancement"]
+body:
+  - type: input
+    id: university
+    attributes:
+      label: University / college and programme
+      placeholder: "AKTU – B.Tech CSE"
+    validations:
+      required: true
+  - type: checkboxes
+    id: what
+    attributes:
+      label: What should we support?
+      options:
+        - label: Our front-page layout
+        - label: Our question-paper format
+        - label: An assignment / answer format (e.g. lab record, case study style)
+        - label: Extra front-page fields we need (list them below)
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What is different about your university's format?
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Sample files
+      description: A blank front page and/or a sample question paper help the most.
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Privacy:** before attaching any file, remove your name, roll/enrolment number, phone, email and address. Never paste an API key.
