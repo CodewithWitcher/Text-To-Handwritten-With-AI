@@ -14,15 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CodewithWitcher/text-to-handwriting-ai.git"
+    "url": "git+https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI.git"
   },
   "keywords": [],
   "author": "CodewithWitcher (https://github.com/CodewithWitcher)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/CodewithWitcher/text-to-handwriting-ai/issues"
+    "url": "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/issues"
   },
-  "homepage": "https://github.com/CodewithWitcher/text-to-handwriting-ai#readme",
+  "homepage": "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI#readme",
   "devDependencies": {
     "cypress": "^4.4.1",
     "eslint": "^7.0.0",

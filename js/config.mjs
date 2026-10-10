@@ -3,5 +3,5 @@
  */
 export const AUTHOR = 'CodewithWitcher';
 export const AUTHOR_URL = 'https://github.com/CodewithWitcher';
-export const REPO = 'CodewithWitcher/text-to-handwriting-ai';
+export const REPO = 'CodewithWitcher/Text-To-Handwritten-With-AI';
 export const REPO_URL = `https://github.com/${REPO}`;
