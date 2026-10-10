@@ -2,17 +2,64 @@
  * Advanced mode controller: tabs, the 4-step "Create" flow, profile,
  * AI settings and templates. Loaded on demand by js/mode-switch.mjs.
  */
-import { $, $$, el, toast, setBusy, readFileAs, downloadDataUrl, downloadText, copyText, debounce, uid, sleep } from './ui.mjs';
-import { load, save, putBlob, getBlob, listKeys, clearAllData } from './store.mjs';
-import { renderProfileForm, getProfile, academicContext } from './profile.mjs';
-import { PROVIDERS, getAISettings, saveAISettings, activeProvider, isConfigured, complete, listModels, testConnection } from './llm.mjs';
 import {
-  BUILTIN_TEMPLATES, allTemplates, getTemplate, customTemplates, saveCustomTemplates,
-  duplicateTemplate, answerSystemPrompt, answerUserPrompt, bulkCopyPrompt, parseBulkAnswers, composeDocument, targetWords
+  $,
+  $$,
+  el,
+  toast,
+  setBusy,
+  readFileAs,
+  downloadDataUrl,
+  downloadText,
+  copyText,
+  debounce,
+  uid,
+  sleep
+} from './ui.mjs';
+import {
+  load,
+  save,
+  putBlob,
+  getBlob,
+  listKeys,
+  clearAllData
+} from './store.mjs';
+import { renderProfileForm, getProfile, academicContext } from './profile.mjs';
+import {
+  PROVIDERS,
+  getAISettings,
+  saveAISettings,
+  activeProvider,
+  isConfigured,
+  complete,
+  listModels,
+  testConnection
+} from './llm.mjs';
+import {
+  BUILTIN_TEMPLATES,
+  allTemplates,
+  getTemplate,
+  customTemplates,
+  saveCustomTemplates,
+  duplicateTemplate,
+  answerSystemPrompt,
+  answerUserPrompt,
+  bulkCopyPrompt,
+  parseBulkAnswers,
+  composeDocument,
+  targetWords
 } from './templates.mjs';
 import { extractBasic, extractWithAI } from './questions.mjs';
 import { extractPdfText, fileToBase64 } from './pdf-input.mjs';
-import { DEFAULT_STYLE, parseDocument, paginate, capturePages, ensureFont, PAGE_W, PAGE_H } from './renderer.mjs';
+import {
+  DEFAULT_STYLE,
+  parseDocument,
+  paginate,
+  capturePages,
+  ensureFont,
+  PAGE_W,
+  PAGE_H
+} from './renderer.mjs';
 import { FrontPageEditor } from './frontpage.mjs';
 import { buildPdf } from './output.mjs';
 
@@ -33,9 +80,17 @@ const BUILTIN_FONTS = [
 
 // Sensible starting sizes per font (they differ a lot in visual size).
 const FONT_SIZE_HINT = {
-  'Homemade Apple': 14, Caveat: 20, Kalam: 16, 'Indie Flower': 17, 'Shadows Into Light': 18,
-  'Gloria Hallelujah': 15, 'Reenie Beanie': 22, 'Nanum Pen Script': 22, 'Dawning of a New Day': 20,
-  'Cedarville Cursive': 16, 'Liu Jian Mao Cao': 20
+  'Homemade Apple': 14,
+  Caveat: 20,
+  Kalam: 16,
+  'Indie Flower': 17,
+  'Shadows Into Light': 18,
+  'Gloria Hallelujah': 15,
+  'Reenie Beanie': 22,
+  'Nanum Pen Script': 22,
+  'Dawning of a New Day': 20,
+  'Cedarville Cursive': 16,
+  'Liu Jian Mao Cao': 20
 };
 
 let style;
@@ -86,8 +141,12 @@ export async function init() {
 function initTabs() {
   $$('.adv-tabs [data-tab]').forEach((btn) =>
     btn.addEventListener('click', () => {
-      $$('.adv-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b === btn)));
-      $$('.adv-panel').forEach((p) => (p.hidden = p.dataset.panel !== btn.dataset.tab));
+      $$('.adv-tabs [data-tab]').forEach((b) =>
+        b.setAttribute('aria-selected', String(b === btn))
+      );
+      $$('.adv-panel').forEach(
+        (p) => (p.hidden = p.dataset.panel !== btn.dataset.tab)
+      );
       if (btn.dataset.tab === 'create') {
         frontPage && frontPage.redraw();
         refreshAIAvailability();
@@ -120,12 +179,15 @@ function fillFontSelect() {
   const select = $('#st-font');
   select.textContent = '';
   for (const [value, label] of BUILTIN_FONTS) {
-    select.append(el('option', { value, text: label, style: { fontFamily: value } }));
+    select.append(
+      el('option', { value, text: label, style: { fontFamily: value } })
+    );
   }
   const custom = load('fonts', []);
   if (custom.length) {
     const group = el('optgroup', { label: 'Your fonts' });
-    for (const f of custom) group.append(el('option', { value: `'${f.family}'`, text: f.name }));
+    for (const f of custom)
+      group.append(el('option', { value: `'${f.family}'`, text: f.name }));
     select.append(group);
   }
   select.value = style.font;
@@ -141,7 +203,8 @@ function initStyle() {
     if (input.type === 'checkbox') input.checked = !!style[key];
     else input.value = String(style[key]);
     input.addEventListener('change', () => {
-      style[key] = input.type === 'checkbox' ? input.checked : parse(input.value);
+      style[key] =
+        input.type === 'checkbox' ? input.checked : parse(input.value);
       saveStyle();
       onStyleChange();
     });
@@ -167,7 +230,8 @@ function initStyle() {
 
   $('#st-font').addEventListener('change', (e) => {
     style.font = e.target.value;
-    const label = e.target.selectedOptions[0] && e.target.selectedOptions[0].textContent;
+    const label =
+      e.target.selectedOptions[0] && e.target.selectedOptions[0].textContent;
     if (FONT_SIZE_HINT[label]) {
       style.fontSize = FONT_SIZE_HINT[label];
       $('#st-fontSize').value = style.fontSize;
@@ -188,7 +252,11 @@ function initStyle() {
       document.fonts.add(await face.load());
       await putBlob(`font:${id}`, buf);
       const fonts = load('fonts', []);
-      fonts.push({ id, family, name: file.name.replace(/\.(ttf|otf|woff2?)$/i, '') });
+      fonts.push({
+        id,
+        family,
+        name: file.name.replace(/\.(ttf|otf|woff2?)$/i, '')
+      });
       save('fonts', fonts);
       style.font = `'${family}'`;
       saveStyle();
@@ -204,21 +272,27 @@ function initStyle() {
   const fillTemplates = () => {
     templateSelect.textContent = '';
     const builtin = el('optgroup', { label: 'Built-in' });
-    BUILTIN_TEMPLATES.forEach((t) => builtin.append(el('option', { value: t.id, text: t.name })));
+    BUILTIN_TEMPLATES.forEach((t) =>
+      builtin.append(el('option', { value: t.id, text: t.name }))
+    );
     templateSelect.append(builtin);
     const custom = customTemplates();
     if (custom.length) {
       const g = el('optgroup', { label: 'Your templates' });
-      custom.forEach((t) => g.append(el('option', { value: t.id, text: t.name })));
+      custom.forEach((t) =>
+        g.append(el('option', { value: t.id, text: t.name }))
+      );
       templateSelect.append(g);
     }
     templateSelect.value = getTemplate(draft.templateId).id;
-    $('#adv-template-desc').textContent = getTemplate(draft.templateId).description || '';
+    $('#adv-template-desc').textContent =
+      getTemplate(draft.templateId).description || '';
   };
   fillTemplates();
   templateSelect.addEventListener('change', () => {
     draft.templateId = templateSelect.value;
-    $('#adv-template-desc').textContent = getTemplate(draft.templateId).description || '';
+    $('#adv-template-desc').textContent =
+      getTemplate(draft.templateId).description || '';
     saveDraft();
     renderQuestions();
   });
@@ -235,11 +309,14 @@ const renderStylePreview = debounce(async () => {
   );
   await ensureFont(style.font);
   const stage = $('#hw-stage');
-  const [page] = paginate(sample, style, stage, { headerText: headerText(), maxPages: 1 });
+  const [page] = paginate(sample, style, stage, {
+    headerText: headerText(),
+    maxPages: 1
+  });
   box.textContent = '';
   page.style.transform = `scale(${box.clientWidth / PAGE_W || 0.5})`;
   page.style.transformOrigin = '0 0';
-  box.style.height = `${PAGE_H * ((box.clientWidth / PAGE_W) || 0.5)}px`;
+  box.style.height = `${PAGE_H * (box.clientWidth / PAGE_W || 0.5)}px`;
   box.append(page);
   stage.textContent = '';
 }, 150);
@@ -252,7 +329,9 @@ function onStyleChange() {
 
 function headerText() {
   const p = getProfile().values;
-  return [p.name, p.rollNo && `Roll No. ${p.rollNo}`].filter(Boolean).join('  |  ');
+  return [p.name, p.rollNo && `Roll No. ${p.rollNo}`]
+    .filter(Boolean)
+    .join('  |  ');
 }
 
 /* -------------------------------- Profile -------------------------------- */
@@ -267,8 +346,16 @@ function initProfile() {
     const data = {};
     for (const k of listKeys()) data[k] = load(k);
     // Never export API keys by accident.
-    if (data['ai-settings']) data['ai-settings'] = { ...data['ai-settings'], keys: {} };
-    downloadText(JSON.stringify({ app: 'text-to-handwriting-ai', version: 1, data }, null, 2), 'handwriting-data.json');
+    if (data['ai-settings'])
+      data['ai-settings'] = { ...data['ai-settings'], keys: {} };
+    downloadText(
+      JSON.stringify(
+        { app: 'text-to-handwriting-ai', version: 1, data },
+        null,
+        2
+      ),
+      'handwriting-data.json'
+    );
   });
 
   $('#data-import').addEventListener('change', async (e) => {
@@ -277,7 +364,11 @@ function initProfile() {
     if (!file) return;
     try {
       const parsed = JSON.parse(await readFileAs(file, 'text'));
-      if (!parsed || parsed.app !== 'text-to-handwriting-ai' || typeof parsed.data !== 'object') {
+      if (
+        !parsed ||
+        parsed.app !== 'text-to-handwriting-ai' ||
+        typeof parsed.data !== 'object'
+      ) {
         throw new Error('This is not an export from this app.');
       }
       for (const [k, v] of Object.entries(parsed.data)) {
@@ -292,7 +383,12 @@ function initProfile() {
   });
 
   $('#data-clear').addEventListener('click', async () => {
-    if (!window.confirm('Delete your profile, API keys, templates, fonts, front pages and drafts from this browser?')) return;
+    if (
+      !window.confirm(
+        'Delete your profile, API keys, templates, fonts, front pages and drafts from this browser?'
+      )
+    )
+      return;
     await clearAllData();
     toast('All saved data deleted. Reloading…', 'success');
     setTimeout(() => location.reload(), 800);
@@ -304,8 +400,11 @@ function initProfile() {
 function initAISettings() {
   const settings = getAISettings();
   const providerSel = $('#ai-provider');
-  providerSel.append(el('option', { value: 'none', text: 'No AI – copy/paste with any chatbot' }));
-  for (const [id, p] of Object.entries(PROVIDERS)) providerSel.append(el('option', { value: id, text: p.label }));
+  providerSel.append(
+    el('option', { value: 'none', text: 'No AI – copy/paste with any chatbot' })
+  );
+  for (const [id, p] of Object.entries(PROVIDERS))
+    providerSel.append(el('option', { value: id, text: p.label }));
   providerSel.value = settings.provider;
 
   const keyInput = $('#ai-key');
@@ -320,7 +419,8 @@ function initAISettings() {
     $$('[data-ai]').forEach((n) => (n.hidden = !def));
     $('#ai-test').hidden = !def;
     if (!def) {
-      $('#ai-status').textContent = 'Answers can be produced with the copy-paste workflow in step 3.';
+      $('#ai-status').textContent =
+        'Answers can be produced with the copy-paste workflow in step 3.';
       return;
     }
     $('[data-ai="key"]').hidden = !!def.noKey;
@@ -328,14 +428,17 @@ function initAISettings() {
     keyInput.value = s.keys[id] || '';
     modelInput.value = s.models[id] || def.defaultModel || '';
     baseInput.value = s.baseUrls[id] || def.baseUrl || '';
-    visionInput.checked = s.vision[id] !== undefined ? s.vision[id] : !!def.vision;
+    visionInput.checked =
+      s.vision[id] !== undefined ? s.vision[id] : !!def.vision;
     const link = $('#ai-key-link');
     link.hidden = !def.keyUrl;
     if (def.keyUrl) link.href = def.keyUrl;
     const list = $('#ai-model-list');
     list.textContent = '';
     (def.models || []).forEach((m) => list.append(el('option', { value: m })));
-    $('#ai-status').textContent = isConfigured(activeProvider(s)) ? 'Ready.' : 'Add your key to start.';
+    $('#ai-status').textContent = isConfigured(activeProvider(s))
+      ? 'Ready.'
+      : 'Add your key to start.';
   };
 
   const update = (fn) => {
@@ -349,10 +452,18 @@ function initAISettings() {
     update((s) => (s.provider = providerSel.value));
     show();
   });
-  keyInput.addEventListener('input', () => update((s) => (s.keys[s.provider] = keyInput.value.trim())));
-  modelInput.addEventListener('input', () => update((s) => (s.models[s.provider] = modelInput.value.trim())));
-  baseInput.addEventListener('input', () => update((s) => (s.baseUrls[s.provider] = baseInput.value.trim())));
-  visionInput.addEventListener('change', () => update((s) => (s.vision[s.provider] = visionInput.checked)));
+  keyInput.addEventListener('input', () =>
+    update((s) => (s.keys[s.provider] = keyInput.value.trim()))
+  );
+  modelInput.addEventListener('input', () =>
+    update((s) => (s.models[s.provider] = modelInput.value.trim()))
+  );
+  baseInput.addEventListener('input', () =>
+    update((s) => (s.baseUrls[s.provider] = baseInput.value.trim()))
+  );
+  visionInput.addEventListener('change', () =>
+    update((s) => (s.vision[s.provider] = visionInput.checked))
+  );
   $('#ai-key-show').addEventListener('click', (e) => {
     keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
     e.target.textContent = keyInput.type === 'password' ? 'Show' : 'Hide';
@@ -360,14 +471,17 @@ function initAISettings() {
 
   $('#ai-fetch-models').addEventListener('click', async (e) => {
     const p = activeProvider();
-    if (!p || (!p.noKey && !p.apiKey)) return toast('Enter your API key first.', 'error');
+    if (!p || (!p.noKey && !p.apiKey))
+      return toast('Enter your API key first.', 'error');
     setBusy(e.target, true, 'Loading…');
     try {
       const ids = await listModels(p);
       const list = $('#ai-model-list');
       list.textContent = '';
       ids.forEach((m) => list.append(el('option', { value: m })));
-      $('#ai-status').textContent = `${ids.length} models available. Click the Model box to choose.`;
+      $(
+        '#ai-status'
+      ).textContent = `${ids.length} models available. Click the Model box to choose.`;
     } catch (err) {
       $('#ai-status').textContent = err.message;
     } finally {
@@ -380,7 +494,9 @@ function initAISettings() {
     $('#ai-status').textContent = '';
     try {
       const reply = await testConnection();
-      $('#ai-status').textContent = `✓ Connected. The model replied: "${reply}"`;
+      $(
+        '#ai-status'
+      ).textContent = `✓ Connected. The model replied: "${reply}"`;
     } catch (err) {
       $('#ai-status').textContent = `✗ ${err.message}`;
     } finally {
@@ -404,7 +520,11 @@ function refreshAIAvailability() {
 
 function requireAI() {
   if (isConfigured()) return activeProvider();
-  toast('Set up an AI provider first (AI Settings tab), or use the copy-paste workflow.', 'error', 6000);
+  toast(
+    'Set up an AI provider first (AI Settings tab), or use the copy-paste workflow.',
+    'error',
+    6000
+  );
   goToTab('ai');
   return null;
 }
@@ -422,8 +542,14 @@ function initTemplatesTab() {
       list.append(
         el(
           `button.adv-list-item${t.id === selected ? '.active' : ''}`,
-          { type: 'button', onclick: () => ((selected = t.id), renderList(), renderEditor()) },
-          [el('b', { text: t.name }), el('small', { text: t.custom ? 'Your template' : 'Built-in' })]
+          {
+            type: 'button',
+            onclick: () => ((selected = t.id), renderList(), renderEditor())
+          },
+          [
+            el('b', { text: t.name }),
+            el('small', { text: t.custom ? 'Your template' : 'Built-in' })
+          ]
         )
       );
     }
@@ -443,7 +569,9 @@ function initTemplatesTab() {
         input.checked = !!t[key];
       } else if (type === 'select') {
         input = el('select');
-        opts.options.forEach(([v, l]) => input.append(el('option', { value: v, text: l })));
+        opts.options.forEach(([v, l]) =>
+          input.append(el('option', { value: v, text: l }))
+        );
         input.value = t[key];
       } else {
         input = el('input', { type });
@@ -454,7 +582,12 @@ function initTemplatesTab() {
         const all = customTemplates();
         const mine = all.find((x) => x.id === t.id);
         if (!mine) return;
-        mine[key] = type === 'checkbox' ? input.checked : type === 'number' ? Number(input.value) : input.value;
+        mine[key] =
+          type === 'checkbox'
+            ? input.checked
+            : type === 'number'
+            ? Number(input.value)
+            : input.value;
         saveCustomTemplates(all);
         initStyle.fillTemplates();
         if (key === 'name') renderList();
@@ -468,8 +601,16 @@ function initTemplatesTab() {
       el('div.adv-grid', {}, [
         el('div.span-2', {}, [field('name', 'Name')]),
         el('div.span-2', {}, [field('description', 'Description')]),
-        field('kind', 'Type', 'select', { options: [['qa', 'Questions & answers'], ['essay', 'Essay / article']] }),
-        field('questionFormat', 'Question heading ({n} = number, {question} = text)'),
+        field('kind', 'Type', 'select', {
+          options: [
+            ['qa', 'Questions & answers'],
+            ['essay', 'Essay / article']
+          ]
+        }),
+        field(
+          'questionFormat',
+          'Question heading ({n} = number, {question} = text)'
+        ),
         field('answerLabel', 'Answer label (e.g. "Ans.", empty for none)'),
         field('showMarks', 'Show marks in heading', 'checkbox'),
         field('titleBlock', 'Title at the top of the first page', 'checkbox'),
@@ -477,7 +618,13 @@ function initTemplatesTab() {
         field('defaultWords', 'Words when marks unknown', 'number'),
         field('minWords', 'Minimum words', 'number'),
         field('maxWords', 'Maximum words', 'number'),
-        el('div.span-2', {}, [field('instructions', 'How answers should be written (sent to the AI)', 'textarea')])
+        el('div.span-2', {}, [
+          field(
+            'instructions',
+            'How answers should be written (sent to the AI)',
+            'textarea'
+          )
+        ])
       ]),
       el('div.adv-toolbar', {}, [
         el('button', {
@@ -509,8 +656,11 @@ function initTemplatesTab() {
             text: 'Delete',
             onclick: () => {
               if (!window.confirm(`Delete template "${t.name}"?`)) return;
-              saveCustomTemplates(customTemplates().filter((x) => x.id !== t.id));
-              if (draft.templateId === t.id) draft.templateId = BUILTIN_TEMPLATES[0].id;
+              saveCustomTemplates(
+                customTemplates().filter((x) => x.id !== t.id)
+              );
+              if (draft.templateId === t.id)
+                draft.templateId = BUILTIN_TEMPLATES[0].id;
               selected = draft.templateId;
               saveDraft();
               initStyle.fillTemplates();
@@ -538,7 +688,9 @@ function initFrontPage() {
     }
   });
   $('#fp-enabled').checked = !!frontPage.state.enabled;
-  $('#fp-enabled').addEventListener('change', (e) => frontPage.setEnabled(e.target.checked));
+  $('#fp-enabled').addEventListener('change', (e) =>
+    frontPage.setEnabled(e.target.checked)
+  );
 }
 
 /* -------------------------------- Content -------------------------------- */
@@ -547,7 +699,9 @@ function initContent() {
   const radios = $$('input[name="src"]');
   const applySource = () => {
     radios.forEach((r) => (r.checked = r.value === draft.source));
-    $$('[data-src]').forEach((n) => (n.hidden = !n.dataset.src.split(' ').includes(draft.source)));
+    $$('[data-src]').forEach(
+      (n) => (n.hidden = !n.dataset.src.split(' ').includes(draft.source))
+    );
   };
   radios.forEach((r) =>
     r.addEventListener('change', () => {
@@ -564,7 +718,10 @@ function initContent() {
     draft.pasteText = e.target.value;
     saveDraft();
   });
-  if (draft.pdfName) $('#src-pdf-info').textContent = `Last paper: ${draft.pdfName} (text kept). Upload again to use AI PDF reading.`;
+  if (draft.pdfName)
+    $(
+      '#src-pdf-info'
+    ).textContent = `Last paper: ${draft.pdfName} (text kept). Upload again to use AI PDF reading.`;
 
   $('#src-pdf-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -576,13 +733,21 @@ function initContent() {
         pdfSource = { file: null, base64: null };
       } else {
         pdfSource = { file, base64: null };
-        const res = await extractPdfText(file, { onProgress: (m) => (info.textContent = m) });
+        const res = await extractPdfText(file, {
+          onProgress: (m) => (info.textContent = m)
+        });
         draft.pdfText = res.text.slice(0, 500000);
-        info.textContent = `${file.name}: ${res.numPages} page(s)${res.scannedPages.length ? `, ${res.scannedPages.length} read with OCR` : ''}.`;
+        info.textContent = `${file.name}: ${res.numPages} page(s)${
+          res.scannedPages.length
+            ? `, ${res.scannedPages.length} read with OCR`
+            : ''
+        }.`;
       }
       draft.pdfName = file.name;
       saveDraft();
-      if (!draft.pdfText.trim()) info.textContent += ' No text found. Try "Find questions (AI)" with Claude, which can read scanned PDFs.';
+      if (!draft.pdfText.trim())
+        info.textContent +=
+          ' No text found. Try "Find questions (AI)" with Claude, which can read scanned PDFs.';
     } catch (err) {
       info.textContent = `Could not read the PDF: ${err.message}`;
     }
@@ -598,7 +763,8 @@ function initContent() {
     });
   }
 
-  const paperText = () => (draft.source === 'paste' ? draft.pasteText : draft.pdfText);
+  const paperText = () =>
+    draft.source === 'paste' ? draft.pasteText : draft.pdfText;
 
   const applyExtraction = (res) => {
     draft.questions = res.questions;
@@ -619,11 +785,18 @@ function initContent() {
 
   $('#find-basic').addEventListener('click', () => {
     const text = paperText();
-    if (!String(text).trim()) return toast('Upload a paper or paste the questions first.', 'error');
-    if (draft.questions.length && !window.confirm('Replace the current questions and answers?')) return;
+    if (!String(text).trim())
+      return toast('Upload a paper or paste the questions first.', 'error');
+    if (
+      draft.questions.length &&
+      !window.confirm('Replace the current questions and answers?')
+    )
+      return;
     const res = extractBasic(text);
     applyExtraction(res);
-    $('#find-status').textContent = `Found ${res.questions.length} question(s). Check and edit them below.`;
+    $(
+      '#find-status'
+    ).textContent = `Found ${res.questions.length} question(s). Check and edit them below.`;
   });
 
   $('#find-ai').addEventListener('click', async (e) => {
@@ -631,12 +804,18 @@ function initContent() {
     if (!provider) return;
     const text = paperText();
     const canUsePdf = draft.source === 'pdf' && pdfSource.file && provider.pdf;
-    if (!String(text).trim() && !canUsePdf) return toast('Upload a paper or paste the questions first.', 'error');
-    if (draft.questions.length && !window.confirm('Replace the current questions and answers?')) return;
+    if (!String(text).trim() && !canUsePdf)
+      return toast('Upload a paper or paste the questions first.', 'error');
+    if (
+      draft.questions.length &&
+      !window.confirm('Replace the current questions and answers?')
+    )
+      return;
     setBusy(e.target, true, 'Finding…');
     const status = $('#find-status');
     try {
-      if (canUsePdf && !pdfSource.base64) pdfSource.base64 = await fileToBase64(pdfSource.file);
+      if (canUsePdf && !pdfSource.base64)
+        pdfSource.base64 = await fileToBase64(pdfSource.file);
       const res = await extractWithAI(
         { text, pdfBase64: canUsePdf ? pdfSource.base64 : null },
         provider,
@@ -652,24 +831,36 @@ function initContent() {
   });
 
   $('#add-question').addEventListener('click', () => {
-    draft.questions.push({ id: uid(), number: String(draft.questions.length + 1), text: '', marks: '', wordLimit: '' });
+    draft.questions.push({
+      id: uid(),
+      number: String(draft.questions.length + 1),
+      text: '',
+      marks: '',
+      wordLimit: ''
+    });
     saveDraft();
     renderQuestions();
   });
 
   $('#gen-all').addEventListener('click', () => generateAnswers(false));
   $('#gen-missing').addEventListener('click', () => generateAnswers(true));
-  $('#gen-stop').addEventListener('click', () => genController && genController.abort());
+  $('#gen-stop').addEventListener(
+    'click',
+    () => genController && genController.abort()
+  );
 
   $('#copy-prompt').addEventListener('click', async () => {
-    if (!draft.questions.length) return toast('Find or add questions first.', 'error');
+    if (!draft.questions.length)
+      return toast('Find or add questions first.', 'error');
     const prompt = bulkCopyPrompt({
       questions: draft.questions,
       template: getTemplate(draft.templateId),
       context: academicContext(),
       docInfo: draft.docInfo
     });
-    (await copyText(prompt)) ? toast('Prompt copied. Paste it into your chatbot.', 'success') : toast('Copy failed.', 'error');
+    (await copyText(prompt))
+      ? toast('Prompt copied. Paste it into your chatbot.', 'success')
+      : toast('Copy failed.', 'error');
   });
 
   $('#import-answers').addEventListener('click', () => {
@@ -688,7 +879,12 @@ function initContent() {
     }
     saveDraft();
     renderQuestions();
-    toast(count ? `Imported ${count} answer(s).` : 'No "=== ANSWER n ===" markers found.', count ? 'success' : 'error');
+    toast(
+      count
+        ? `Imported ${count} answer(s).`
+        : 'No "=== ANSWER n ===" markers found.',
+      count ? 'success' : 'error'
+    );
   });
 
   // Own content
@@ -703,7 +899,12 @@ function initContent() {
       const { selectionStart: s, selectionEnd: en, value } = own;
       if (b.dataset.wrap) {
         const w = b.dataset.wrap;
-        own.setRangeText(`${w}${value.slice(s, en) || 'text'}${w}`, s, en, 'end');
+        own.setRangeText(
+          `${w}${value.slice(s, en) || 'text'}${w}`,
+          s,
+          en,
+          'end'
+        );
       } else {
         const lineStart = value.lastIndexOf('\n', s - 1) + 1;
         own.setRangeText(b.dataset.insert, lineStart, lineStart, 'end');
@@ -723,23 +924,42 @@ function renderQuestions() {
   list.textContent = '';
   const template = getTemplate(draft.templateId);
   if (!draft.questions.length) {
-    list.append(el('p.adv-hint', { text: 'No questions yet. Upload or paste the paper, then click "Find questions".' }));
+    list.append(
+      el('p.adv-hint', {
+        text:
+          'No questions yet. Upload or paste the paper, then click "Find questions".'
+      })
+    );
     return;
   }
   draft.questions.forEach((q, idx) => {
     const num = el('input.q-num', { 'aria-label': 'Question number' });
     num.value = q.number;
-    const marks = el('input.q-marks', { placeholder: 'marks', 'aria-label': 'Marks' });
+    const marks = el('input.q-marks', {
+      placeholder: 'marks',
+      'aria-label': 'Marks'
+    });
     marks.value = q.marks;
-    const words = el('input.q-marks', { placeholder: 'words', 'aria-label': 'Word limit' });
+    const words = el('input.q-marks', {
+      placeholder: 'words',
+      'aria-label': 'Word limit'
+    });
     words.value = q.wordLimit;
-    const text = el('textarea.q-text', { rows: 2, 'aria-label': 'Question text' });
+    const text = el('textarea.q-text', {
+      rows: 2,
+      'aria-label': 'Question text'
+    });
     text.value = q.text;
-    const answer = el('textarea.q-answer', { rows: 6, placeholder: 'Answer (generate with AI, import, or type/paste here)', 'aria-label': 'Answer' });
+    const answer = el('textarea.q-answer', {
+      rows: 6,
+      placeholder: 'Answer (generate with AI, import, or type/paste here)',
+      'aria-label': 'Answer'
+    });
     answer.value = draft.answers[q.id] || '';
     const status = el('span.adv-status.q-status');
     const target = el('small.adv-hint');
-    const updateTarget = () => (target.textContent = `≈ ${targetWords(q, template)} words`);
+    const updateTarget = () =>
+      (target.textContent = `≈ ${targetWords(q, template)} words`);
     updateTarget();
 
     const bindQ = (input, key) =>
@@ -776,7 +996,10 @@ function renderQuestions() {
           'aria-label': 'Move question up',
           disabled: idx === 0,
           onclick: () => {
-            [draft.questions[idx - 1], draft.questions[idx]] = [draft.questions[idx], draft.questions[idx - 1]];
+            [draft.questions[idx - 1], draft.questions[idx]] = [
+              draft.questions[idx],
+              draft.questions[idx - 1]
+            ];
             saveDraft();
             renderQuestions();
           }
@@ -808,10 +1031,19 @@ async function generateAnswers(onlyMissing, subset) {
   if (!provider) return;
   const template = getTemplate(draft.templateId);
   const targets = (subset || draft.questions).filter(
-    (q) => String(q.text).trim() && (!onlyMissing || !String(draft.answers[q.id] || '').trim())
+    (q) =>
+      String(q.text).trim() &&
+      (!onlyMissing || !String(draft.answers[q.id] || '').trim())
   );
-  if (!targets.length) return toast(onlyMissing ? 'Every question already has an answer.' : 'No questions to answer.', 'info');
-  if (genController) return toast('Already generating. Press Stop first.', 'info');
+  if (!targets.length)
+    return toast(
+      onlyMissing
+        ? 'Every question already has an answer.'
+        : 'No questions to answer.',
+      'info'
+    );
+  if (genController)
+    return toast('Already generating. Press Stop first.', 'info');
 
   genController = new AbortController();
   const signal = genController.signal;
@@ -826,7 +1058,9 @@ async function generateAnswers(onlyMissing, subset) {
       if (signal.aborted) break;
       const card = $(`.q-card[data-id="${q.id}"]`);
       const qStatus = card && $('.q-status', card);
-      status.textContent = `Writing answer ${done + failed + 1} of ${targets.length}…`;
+      status.textContent = `Writing answer ${done + failed + 1} of ${
+        targets.length
+      }…`;
       if (qStatus) qStatus.textContent = 'Writing…';
       card && card.classList.add('working');
 
@@ -836,7 +1070,12 @@ async function generateAnswers(onlyMissing, subset) {
           const { text, truncated } = await complete(
             {
               system: answerSystemPrompt(template),
-              prompt: answerUserPrompt({ question: q, template, context, docInfo: draft.docInfo }),
+              prompt: answerUserPrompt({
+                question: q,
+                template,
+                context,
+                docInfo: draft.docInfo
+              }),
               maxTokens: 16000,
               effort: 'medium',
               signal
@@ -849,7 +1088,10 @@ async function generateAnswers(onlyMissing, subset) {
             $('.q-answer', card).value = draft.answers[q.id];
             $('.q-gen', card).textContent = 'Regenerate';
           }
-          if (qStatus) qStatus.textContent = truncated ? '⚠ Answer was cut off by the model’s length limit. Regenerate or edit.' : '✓ Done';
+          if (qStatus)
+            qStatus.textContent = truncated
+              ? '⚠ Answer was cut off by the model’s length limit. Regenerate or edit.'
+              : '✓ Done';
           done++;
           break;
         } catch (err) {
@@ -862,16 +1104,21 @@ async function generateAnswers(onlyMissing, subset) {
           }
           failed++;
           if (qStatus) qStatus.textContent = `✗ ${err.message}`;
-          if (err.status === 401 || err.status === 403 || err.status === 402) throw err; // key problem: stop
+          if (err.status === 401 || err.status === 403 || err.status === 402)
+            throw err; // key problem: stop
           break;
         }
       }
       card && card.classList.remove('working');
     }
-    status.textContent = `Finished: ${done} written${failed ? `, ${failed} failed` : ''}.`;
+    status.textContent = `Finished: ${done} written${
+      failed ? `, ${failed} failed` : ''
+    }.`;
     if (pageEls.length) markStale();
   } catch (err) {
-    status.textContent = signal.aborted ? `Stopped. ${done} answer(s) written.` : `✗ ${err.message}`;
+    status.textContent = signal.aborted
+      ? `Stopped. ${done} answer(s) written.`
+      : `✗ ${err.message}`;
   } finally {
     $$('.q-card.working').forEach((c) => c.classList.remove('working'));
     genController = null;
@@ -893,7 +1140,8 @@ function composeCurrent() {
 }
 
 function markStale() {
-  $('#build-status').textContent = 'Settings changed. Click "Render pages" to update.';
+  $('#build-status').textContent =
+    'Settings changed. Click "Render pages" to update.';
 }
 
 function initBuild() {
@@ -906,18 +1154,27 @@ function initBuild() {
   });
 
   $('#build-doc').addEventListener('click', () => {
-    if (draft.docTextEdited && draft.docText && !window.confirm('Rebuild the document? Your manual edits to the final text will be replaced.')) return;
+    if (
+      draft.docTextEdited &&
+      draft.docText &&
+      !window.confirm(
+        'Rebuild the document? Your manual edits to the final text will be replaced.'
+      )
+    )
+      return;
     draft.docText = composeCurrent();
     draft.docTextEdited = false;
     docText.value = draft.docText;
     saveDraft();
     $('#doc-text-wrap').open = true;
-    $('#build-status').textContent = 'Document built. Review the text, then click "Render pages".';
+    $('#build-status').textContent =
+      'Document built. Review the text, then click "Render pages".';
   });
 
   $('#render-pages').addEventListener('click', async (e) => {
     // Use the edited text if the user built/edited it; otherwise compose fresh.
-    const text = draft.docTextEdited && draft.docText ? draft.docText : composeCurrent();
+    const text =
+      draft.docTextEdited && draft.docText ? draft.docText : composeCurrent();
     if (!draft.docTextEdited) {
       draft.docText = text;
       docText.value = text;
@@ -925,10 +1182,26 @@ function initBuild() {
     }
     const blocks = parseDocument(text);
     if (!blocks.some((b) => b.type !== 'break')) {
-      return toast(draft.source === 'own' ? 'Write some content first.' : 'Add questions and answers first.', 'error');
+      return toast(
+        draft.source === 'own'
+          ? 'Write some content first.'
+          : 'Add questions and answers first.',
+        'error'
+      );
     }
-    const missing = draft.source !== 'own' ? draft.questions.filter((q) => !String(draft.answers[q.id] || '').trim()).length : 0;
-    if (missing && !window.confirm(`${missing} question(s) have no answer yet. Render anyway?`)) return;
+    const missing =
+      draft.source !== 'own'
+        ? draft.questions.filter(
+            (q) => !String(draft.answers[q.id] || '').trim()
+          ).length
+        : 0;
+    if (
+      missing &&
+      !window.confirm(
+        `${missing} question(s) have no answer yet. Render anyway?`
+      )
+    )
+      return;
 
     setBusy(e.target, true, 'Rendering…');
     const status = $('#build-status');
@@ -937,12 +1210,16 @@ function initBuild() {
       await ensureFont(style.font, text.slice(0, 200));
       status.textContent = 'Laying out pages…';
       await sleep(20);
-      pageEls = paginate(blocks, style, $('#hw-stage'), { headerText: headerText() });
+      pageEls = paginate(blocks, style, $('#hw-stage'), {
+        headerText: headerText()
+      });
       showPreview(pageEls);
       renderedPages = [];
       $('#download-pdf').disabled = false;
       $('#download-images').disabled = false;
-      status.textContent = `${pageEls.length} page(s)${frontPage.isEnabled() ? ' + front page' : ''}. Download when ready.`;
+      status.textContent = `${pageEls.length} page(s)${
+        frontPage.isEnabled() ? ' + front page' : ''
+      }. Download when ready.`;
     } catch (err) {
       status.textContent = `✗ ${err.message}`;
     } finally {
@@ -951,7 +1228,8 @@ function initBuild() {
   });
 
   const capture = async () => {
-    if (renderedPages.length === pageEls.length && renderedPages.length) return renderedPages;
+    if (renderedPages.length === pageEls.length && renderedPages.length)
+      return renderedPages;
     const status = $('#build-status');
     // html2canvas needs the pages in the live document, unscaled.
     const stage = $('#hw-stage');
@@ -961,7 +1239,11 @@ function initBuild() {
       stage.append(p);
     });
     try {
-      renderedPages = await capturePages(pageEls, style, (m) => (status.textContent = m));
+      renderedPages = await capturePages(
+        pageEls,
+        style,
+        (m) => (status.textContent = m)
+      );
     } finally {
       showPreview(pageEls);
     }
@@ -974,10 +1256,18 @@ function initBuild() {
     try {
       const pages = await capture();
       status.textContent = 'Building PDF…';
-      const front = frontPage.isEnabled() ? await frontPage.exportDataUrl() : null;
-      const name = (draft.docInfo.title || 'assignment').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'assignment';
+      const front = frontPage.isEnabled()
+        ? await frontPage.exportDataUrl()
+        : null;
+      const name =
+        (draft.docInfo.title || 'assignment')
+          .replace(/[^\w\- ]+/g, '')
+          .trim()
+          .replace(/\s+/g, '-') || 'assignment';
       await buildPdf({ frontPage: front, pages, filename: `${name}.pdf` });
-      status.textContent = `PDF downloaded (${pages.length + (front ? 1 : 0)} pages).`;
+      status.textContent = `PDF downloaded (${
+        pages.length + (front ? 1 : 0)
+      } pages).`;
     } catch (err) {
       status.textContent = `✗ ${err.message}`;
     } finally {
@@ -989,7 +1279,8 @@ function initBuild() {
     setBusy(e.target, true, 'Preparing…');
     try {
       const pages = await capture();
-      if (frontPage.isEnabled()) downloadDataUrl(await frontPage.exportDataUrl(), 'page-00-front.jpg');
+      if (frontPage.isEnabled())
+        downloadDataUrl(await frontPage.exportDataUrl(), 'page-00-front.jpg');
       for (let i = 0; i < pages.length; i++) {
         downloadDataUrl(pages[i], `page-${String(i + 1).padStart(2, '0')}.jpg`);
         await sleep(250);
@@ -1010,8 +1301,13 @@ function showPreview(pages) {
   pages.forEach((p, i) => {
     p.style.transform = `scale(${scale})`;
     p.style.transformOrigin = '0 0';
-    const frame = el('div.adv-thumb', { style: { width: `${thumbW}px`, height: `${PAGE_H * scale}px` } }, [p]);
-    box.append(el('figure', {}, [frame, el('figcaption', { text: `Page ${i + 1}` })]));
+    const frame = el(
+      'div.adv-thumb',
+      { style: { width: `${thumbW}px`, height: `${PAGE_H * scale}px` } },
+      [p]
+    );
+    box.append(
+      el('figure', {}, [frame, el('figcaption', { text: `Page ${i + 1}` })])
+    );
   });
 }
-

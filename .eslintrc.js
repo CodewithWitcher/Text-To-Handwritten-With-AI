@@ -11,7 +11,7 @@ module.exports = {
     SharedArrayBuffer: 'readonly'
   },
   parserOptions: {
-    ecmaVersion: 2018,
+    ecmaVersion: 2020,
     sourceType: 'module'
   },
   rules: {
@@ -30,18 +30,17 @@ module.exports = {
         overrides: { '?': 'ignore', ':': 'ignore', '+': 'ignore' }
       }
     ],
-    indent: [
+    // Prettier handles layout; strings/URLs/regexes can't be wrapped safely.
+    'max-len': [
       'error',
-      2,
       {
-        CallExpression: { arguments: 'first' },
-        ignoredNodes: [
-          'CallExpression > CallExpression',
-          'CallExpression > MemberExpression'
-        ],
-        SwitchCase: 1
+        code: 80,
+        ignoreComments: true,
+        ignoreStrings: true,
+        ignoreTemplateLiterals: true,
+        ignoreRegExpLiterals: true,
+        ignoreUrls: true
       }
-    ],
-    'max-len': ['error', { code: 80, ignoreComments: true }]
+    ]
   }
 };

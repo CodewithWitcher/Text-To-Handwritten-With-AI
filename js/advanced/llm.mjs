@@ -120,7 +120,12 @@ export function activeProvider(settings = getAISettings()) {
 }
 
 export function isConfigured(p = activeProvider()) {
-  return !!(p && p.model && (p.noKey || p.apiKey) && (p.kind === 'anthropic' || p.baseUrl));
+  return !!(
+    p &&
+    p.model &&
+    (p.noKey || p.apiKey) &&
+    (p.kind === 'anthropic' || p.baseUrl)
+  );
 }
 
 export class AIError extends Error {
@@ -167,7 +172,9 @@ async function httpJSON(url, { method = 'POST', headers = {}, body, signal }) {
     if (e.name === 'AbortError') throw e;
     throw new AIError(
       `Could not reach the AI provider. ${
-        proxyAvailable ? '' : 'Start the app with "python3 server.py" to avoid browser CORS blocks. '
+        proxyAvailable
+          ? ''
+          : 'Start the app with "python3 server.py" to avoid browser CORS blocks. '
       }(${e.message})`,
       { retryable: true }
     );
@@ -194,9 +201,12 @@ async function httpJSON(url, { method = 'POST', headers = {}, body, signal }) {
 }
 
 function friendlyStatus(status, msg) {
-  if (status === 401 || status === 403) return `The API key was rejected (${status}). ${msg}`;
-  if (status === 402) return `The provider says the account has no credit (${status}). ${msg}`;
-  if (status === 404) return `Model or endpoint not found (${status}). Check the model name. ${msg}`;
+  if (status === 401 || status === 403)
+    return `The API key was rejected (${status}). ${msg}`;
+  if (status === 402)
+    return `The provider says the account has no credit (${status}). ${msg}`;
+  if (status === 404)
+    return `Model or endpoint not found (${status}). Check the model name. ${msg}`;
   if (status === 429) return `Rate limited by the provider (${status}). ${msg}`;
   return `AI request failed (${status}). ${msg}`;
 }
@@ -229,19 +239,30 @@ async function callOpenAICompatible(p, req) {
 
   let data;
   try {
-    data = await httpJSON(`${p.baseUrl}/chat/completions`, { headers, body, signal: req.signal });
+    data = await httpJSON(`${p.baseUrl}/chat/completions`, {
+      headers,
+      body,
+      signal: req.signal
+    });
   } catch (e) {
     // Some models reject response_format; retry once without it.
     if (req.json && e.status === 400) {
       delete body.response_format;
-      data = await httpJSON(`${p.baseUrl}/chat/completions`, { headers, body, signal: req.signal });
+      data = await httpJSON(`${p.baseUrl}/chat/completions`, {
+        headers,
+        body,
+        signal: req.signal
+      });
     } else {
       throw e;
     }
   }
   const choice = data.choices && data.choices[0];
   const text = choice && choice.message && (choice.message.content || '');
-  if (!text) throw new AIError('The AI returned an empty response.', { retryable: true });
+  if (!text)
+    throw new AIError('The AI returned an empty response.', {
+      retryable: true
+    });
   return { text, truncated: choice.finish_reason === 'length' };
 }
 
@@ -262,12 +283,20 @@ async function callClaude(p, req) {
   if (req.pdfBase64) {
     content.push({
       type: 'document',
-      source: { type: 'base64', media_type: 'application/pdf', data: req.pdfBase64 }
+      source: {
+        type: 'base64',
+        media_type: 'application/pdf',
+        data: req.pdfBase64
+      }
     });
   }
   for (const url of req.images || []) {
     const m = /^data:(image\/[a-z+]+);base64,(.*)$/.exec(url);
-    if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } });
+    if (m)
+      content.push({
+        type: 'image',
+        source: { type: 'base64', media_type: m[1], data: m[2] }
+      });
   }
   content.push({ type: 'text', text: req.prompt });
 
@@ -281,13 +310,18 @@ async function callClaude(p, req) {
   const outputConfig = {};
   const supportsEffort = CLAUDE_EFFORT_MODELS.test(p.model);
   if (supportsEffort) outputConfig.effort = req.effort || 'medium';
-  if (req.jsonSchema) outputConfig.format = { type: 'json_schema', schema: req.jsonSchema };
+  if (req.jsonSchema)
+    outputConfig.format = { type: 'json_schema', schema: req.jsonSchema };
   if (Object.keys(outputConfig).length) params.output_config = outputConfig;
 
   // Server-side fallback: if the model declines, the API retries on a
   // suitable fallback model inside the same call.
   const withFallback = supportsEffort
-    ? { ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }
+    ? {
+        ...params,
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default'
+      }
     : null;
 
   const run = (body) =>
@@ -301,22 +335,34 @@ async function callClaude(p, req) {
       message = await run(withFallback || params);
     } catch (e) {
       // If the account/model doesn't accept the fallback beta, retry plainly.
-      if (withFallback && e instanceof Anthropic.BadRequestError && /fallback/i.test(e.message)) {
+      if (
+        withFallback &&
+        e instanceof Anthropic.BadRequestError &&
+        /fallback/i.test(e.message)
+      ) {
         message = await run(params);
       } else {
         throw e;
       }
     }
   } catch (e) {
-    if (e.name === 'AbortError' || e instanceof Anthropic.APIUserAbortError) throw e;
+    if (e.name === 'AbortError' || e instanceof Anthropic.APIUserAbortError)
+      throw e;
     if (e instanceof Anthropic.AuthenticationError) {
-      throw new AIError('Claude rejected the API key. Check it in AI Settings.', { status: 401 });
+      throw new AIError(
+        'Claude rejected the API key. Check it in AI Settings.',
+        { status: 401 }
+      );
     }
     if (e instanceof Anthropic.PermissionDeniedError) {
-      throw new AIError(`Claude: permission denied. ${e.message}`, { status: 403 });
+      throw new AIError(`Claude: permission denied. ${e.message}`, {
+        status: 403
+      });
     }
     if (e instanceof Anthropic.NotFoundError) {
-      throw new AIError(`Claude: model "${p.model}" not found.`, { status: 404 });
+      throw new AIError(`Claude: model "${p.model}" not found.`, {
+        status: 404
+      });
     }
     if (e instanceof Anthropic.RateLimitError) {
       throw new AIError('Claude rate limit reached. Wait a moment and retry.', {
@@ -325,12 +371,17 @@ async function callClaude(p, req) {
       });
     }
     if (e instanceof Anthropic.BadRequestError) {
-      throw new AIError(`Claude rejected the request: ${e.message}`, { status: 400 });
+      throw new AIError(`Claude rejected the request: ${e.message}`, {
+        status: 400
+      });
     }
     if (e instanceof Anthropic.APIConnectionError) {
-      throw new AIError('Could not connect to Claude. Check your internet connection.', {
-        retryable: true
-      });
+      throw new AIError(
+        'Could not connect to Claude. Check your internet connection.',
+        {
+          retryable: true
+        }
+      );
     }
     if (e instanceof Anthropic.APIError) {
       throw new AIError(`Claude error ${e.status}: ${e.message}`, {
@@ -349,7 +400,10 @@ async function callClaude(p, req) {
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
     .join('');
-  if (!text) throw new AIError('Claude returned an empty response.', { retryable: true });
+  if (!text)
+    throw new AIError('Claude returned an empty response.', {
+      retryable: true
+    });
   return { text, truncated: message.stop_reason === 'max_tokens' };
 }
 
@@ -361,7 +415,9 @@ async function callClaude(p, req) {
  */
 export async function complete(req, provider = activeProvider()) {
   if (!isConfigured(provider)) {
-    throw new AIError('No AI provider is configured. Open the "AI Settings" tab first.');
+    throw new AIError(
+      'No AI provider is configured. Open the "AI Settings" tab first.'
+    );
   }
   return provider.kind === 'anthropic'
     ? callClaude(provider, req)
@@ -400,13 +456,21 @@ export function parseJSONLoose(text) {
 export async function listModels(provider = activeProvider()) {
   if (provider.kind === 'anthropic') {
     const Anthropic = await loadAnthropic();
-    const client = new Anthropic({ apiKey: provider.apiKey, dangerouslyAllowBrowser: true });
+    const client = new Anthropic({
+      apiKey: provider.apiKey,
+      dangerouslyAllowBrowser: true
+    });
     const ids = [];
     for await (const m of client.models.list()) ids.push(m.id);
     return ids;
   }
-  const headers = provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {};
-  const data = await httpJSON(`${provider.baseUrl}/models`, { method: 'GET', headers });
+  const headers = provider.apiKey
+    ? { Authorization: `Bearer ${provider.apiKey}` }
+    : {};
+  const data = await httpJSON(`${provider.baseUrl}/models`, {
+    method: 'GET',
+    headers
+  });
   return (data.data || data.models || [])
     .map((m) => m.id || m.name)
     .filter(Boolean)
@@ -416,7 +480,11 @@ export async function listModels(provider = activeProvider()) {
 
 export async function testConnection(provider = activeProvider()) {
   const { text } = await complete(
-    { prompt: 'Reply with the single word: OK', maxTokens: 1000, effort: 'low' },
+    {
+      prompt: 'Reply with the single word: OK',
+      maxTokens: 1000,
+      effort: 'low'
+    },
     provider
   );
   return text.trim().slice(0, 80);

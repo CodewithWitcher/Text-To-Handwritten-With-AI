@@ -12,7 +12,11 @@ function imageSize(dataUrl) {
   });
 }
 
-export async function buildPdf({ frontPage, pages, filename = 'assignment.pdf' }) {
+export async function buildPdf({
+  frontPage,
+  pages,
+  filename = 'assignment.pdf'
+}) {
   const JsPDF = await ensureJsPDF();
   // eslint-disable-next-line new-cap
   const doc = new JsPDF('p', 'pt', 'a4');
@@ -28,7 +32,16 @@ export async function buildPdf({ frontPage, pages, filename = 'assignment.pdf' }
     const scale = Math.min(W / w, H / h);
     const dw = w * scale;
     const dh = h * scale;
-    doc.addImage(all[i], 'JPEG', (W - dw) / 2, (H - dh) / 2, dw, dh, `page-${i}`, 'FAST');
+    doc.addImage(
+      all[i],
+      'JPEG',
+      (W - dw) / 2,
+      (H - dh) / 2,
+      dw,
+      dh,
+      `page-${i}`,
+      'FAST'
+    );
   }
   doc.save(filename);
 }

@@ -51,7 +51,8 @@ function loadImage(src) {
 /** Downscale very large scans so OCR and the PDF stay fast. */
 async function normalizeImage(dataUrl) {
   const img = await loadImage(dataUrl);
-  if (img.naturalWidth <= MAX_W) return { dataUrl, w: img.naturalWidth, h: img.naturalHeight };
+  if (img.naturalWidth <= MAX_W)
+    return { dataUrl, w: img.naturalWidth, h: img.naturalHeight };
   const scale = MAX_W / img.naturalWidth;
   const c = document.createElement('canvas');
   c.width = MAX_W;
@@ -79,7 +80,15 @@ const compact = (s) => norm(s).replace(/ /g, '');
 const LABEL_SUFFIX = /^(no|number|num|id|i|d|td|ld|1d)$/;
 
 // Labels that end the previous field but are never filled automatically.
-const STOP_LABELS = ['signature of the student', 'signature of student', 'student signature', 'signature', 'sign', 'seal', 'stamp'];
+const STOP_LABELS = [
+  'signature of the student',
+  'signature of student',
+  'student signature',
+  'signature',
+  'sign',
+  'seal',
+  'stamp'
+];
 
 function labelDictionary() {
   const entries = STOP_LABELS.map((l) => ({ key: null, c: compact(l) }));
@@ -148,7 +157,8 @@ function findLabels(line, dict) {
     }
   }
   const result = matches.map((m, idx) => {
-    const nextFrom = idx + 1 < matches.length ? matches[idx + 1].from : text.length;
+    const nextFrom =
+      idx + 1 < matches.length ? matches[idx + 1].from : text.length;
     // Skip "No." / "Id" style suffixes between the label and the blank.
     let to = m.to;
     let rest = text.slice(to, nextFrom);
@@ -214,10 +224,16 @@ function runsOnRow(px, y, x0, x1, gap = 3) {
 function findUnderline(px, line, fromX, toX) {
   const h = line.bbox.y1 - line.bbox.y0;
   let best = null;
-  for (let y = Math.round(line.bbox.y0 + h * 0.4); y <= line.bbox.y1 + h * 0.6; y++) {
+  for (
+    let y = Math.round(line.bbox.y0 + h * 0.4);
+    y <= line.bbox.y1 + h * 0.6;
+    y++
+  ) {
     const runs = runsOnRow(px, y, fromX - 2, Math.min(px.W, toX));
     // Ignore the label's own letters: a real blank is long and nearly unbroken.
-    const total = runs.filter((r) => r.x1 - r.x0 >= h * 0.6).reduce((n, r) => n + (r.x1 - r.x0), 0);
+    const total = runs
+      .filter((r) => r.x1 - r.x0 >= h * 0.6)
+      .reduce((n, r) => n + (r.x1 - r.x0), 0);
     if (!runs.length || total < h * 2) continue;
     const first = runs.find((r) => r.x1 - r.x0 >= h * 0.6);
     if (!first || first.x0 - fromX > h * 3) continue;
@@ -235,13 +251,26 @@ function findContinuation(px, line, underline, lines) {
   const yFrom = Math.round(underline.y + h * 1.1);
   const yTo = Math.round(underline.y + h * 3.2);
   // Must not belong to another labelled line.
-  if (lines.some((l) => l !== line && l.bbox.y1 > yFrom - h * 0.3 && l.bbox.y0 < yTo && l.text.replace(/[^a-z]/gi, '').length > 2)) {
+  if (
+    lines.some(
+      (l) =>
+        l !== line &&
+        l.bbox.y1 > yFrom - h * 0.3 &&
+        l.bbox.y0 < yTo &&
+        l.text.replace(/[^a-z]/gi, '').length > 2
+    )
+  ) {
     return null;
   }
   for (let y = yFrom; y <= yTo; y++) {
     const runs = runsOnRow(px, y, line.bbox.x0 - h * 2, px.W);
     const r = runs.find((x) => x.x1 - x.x0 > h * 6);
-    if (r) return { x: r.x0 + h * 0.3, y: y - Math.max(2, h * 0.12), maxWidth: r.x1 - r.x0 - h * 0.5 };
+    if (r)
+      return {
+        x: r.x0 + h * 0.3,
+        y: y - Math.max(2, h * 0.12),
+        maxWidth: r.x1 - r.x0 - h * 0.5
+      };
   }
   return null;
 }
@@ -249,7 +278,14 @@ function findContinuation(px, line, underline, lines) {
 function placeField(px, line, match, lines) {
   const h = Math.max(10, line.bbox.y1 - line.bbox.y0);
   const size = Math.max(14, Math.min(72, h * 1.05));
-  const under = px && findUnderline(px, line, match.endX, match.nextX === Infinity ? px.W : match.nextX);
+  const under =
+    px &&
+    findUnderline(
+      px,
+      line,
+      match.endX,
+      match.nextX === Infinity ? px.W : match.nextX
+    );
   if (under) {
     const baseline = under.y - Math.max(2, h * 0.12);
     const item = {
@@ -260,7 +296,11 @@ function placeField(px, line, match, lines) {
     };
     // "__ / __ / ____" -> one slot per segment (dates).
     if (match.key === 'date' && under.segs.length >= 3) {
-      item.parts = under.segs.slice(0, 3).map((sg) => ({ x: (sg.x0 + sg.x1) / 2, y: baseline, w: sg.x1 - sg.x0 }));
+      item.parts = under.segs.slice(0, 3).map((sg) => ({
+        x: (sg.x0 + sg.x1) / 2,
+        y: baseline,
+        w: sg.x1 - sg.x0
+      }));
     } else {
       const cont = findContinuation(px, line, under, lines);
       if (cont) item.wrap = cont;
@@ -272,7 +312,11 @@ function placeField(px, line, match, lines) {
     x: match.endX + size * 0.45,
     y: line.bbox.y1 - h * 0.18,
     size,
-    maxWidth: (match.nextX === Infinity ? (px ? px.W : 2000) * 0.95 : match.nextX - size) - (match.endX + size * 0.45)
+    maxWidth:
+      (match.nextX === Infinity
+        ? (px ? px.W : 2000) * 0.95
+        : match.nextX - size) -
+      (match.endX + size * 0.45)
   };
 }
 
@@ -348,7 +392,9 @@ async function detectWithAI(lines, imageDataUrl, provider, px) {
   for (const f of result.fields || []) {
     const line = lines[Number(String(f.line).replace(/\D/g, ''))];
     if (!line || !line.words.length) continue;
-    const key = fields.some((x) => x.key === f.field) ? f.field : `other:${f.label}`;
+    const key = fields.some((x) => x.key === f.field)
+      ? f.field
+      : `other:${f.label}`;
     if (used.has(key)) continue;
     // Locate the label inside the line using the same compact matching.
     const own = findLabels(line, [{ key, c: compact(f.label) }]);
@@ -372,7 +418,8 @@ async function detectWithAI(lines, imageDataUrl, provider, px) {
 /* -------------------------------- Drawing -------------------------------- */
 
 function itemText(item) {
-  if (item.value !== undefined && item.value !== null && item.value !== '') return item.value;
+  if (item.value !== undefined && item.value !== null && item.value !== '')
+    return item.value;
   if (item.key.startsWith('other:')) return '';
   return fieldValue(item.key);
 }
@@ -403,7 +450,15 @@ export function layoutItem(ctx, item, text, font) {
   if (item.parts && item.parts.length) {
     const pieces = text.split(/\s*[/\-.]\s*/).filter(Boolean);
     if (pieces.length === item.parts.length) {
-      pieces.forEach((p, i) => out.push({ text: p, x: item.parts[i].x, y: item.parts[i].y, size, align: 'center' }));
+      pieces.forEach((p, i) =>
+        out.push({
+          text: p,
+          x: item.parts[i].x,
+          y: item.parts[i].y,
+          size,
+          align: 'center'
+        })
+      );
       return out;
     }
   }
@@ -420,7 +475,14 @@ export function layoutItem(ctx, item, text, font) {
       const [a, b] = splitToFit(ctx, text, maxW);
       if (!b || ctx.measureText(b).width <= item.wrap.maxWidth) {
         out.push({ text: a, x: item.x, y: item.y, size: s, align: 'left' });
-        if (b) out.push({ text: b, x: item.wrap.x, y: item.wrap.y, size: s, align: 'left' });
+        if (b)
+          out.push({
+            text: b,
+            x: item.wrap.x,
+            y: item.wrap.y,
+            size: s,
+            align: 'left'
+          });
         return out;
       }
     }
@@ -480,7 +542,12 @@ export class FrontPageEditor {
     this.getStyle = getStyle;
     this.getProvider = getProvider;
     this.onChange = onChange || (() => {});
-    this.state = load('frontpage', { enabled: false, items: [], hasImage: false, v: 2 });
+    this.state = load('frontpage', {
+      enabled: false,
+      items: [],
+      hasImage: false,
+      v: 2
+    });
     this.state.items = migrateItems(this.state.items || [], this.state.v || 1);
     this.state.v = 2;
     this.img = null;
@@ -522,16 +589,24 @@ export class FrontPageEditor {
         e.target.value = '';
       });
     }
-    $('#fp-detect-ocr', this.root).addEventListener('click', () => this.detect(false));
-    $('#fp-detect-ai', this.root).addEventListener('click', () => this.detect(true));
+    $('#fp-detect-ocr', this.root).addEventListener('click', () =>
+      this.detect(false)
+    );
+    $('#fp-detect-ai', this.root).addEventListener('click', () =>
+      this.detect(true)
+    );
     $('#fp-add', this.root).addEventListener('click', () => this.addItem());
     $('#fp-clear-fields', this.root).addEventListener('click', () => {
       this.state.items = [];
       this.persist();
       this.redraw();
     });
-    $('#fp-remove', this.root).addEventListener('click', () => this.removeImage());
-    $('#fp-save-template', this.root).addEventListener('click', () => this.saveAsTemplate());
+    $('#fp-remove', this.root).addEventListener('click', () =>
+      this.removeImage()
+    );
+    $('#fp-save-template', this.root).addEventListener('click', () =>
+      this.saveAsTemplate()
+    );
     $('#fp-download', this.root).addEventListener('click', async () => {
       const url = await this.exportDataUrl();
       if (url) {
@@ -558,7 +633,9 @@ export class FrontPageEditor {
       this.state.items = [];
       this.persist();
       this.redraw();
-      this.setStatus('Front page loaded. Click "Auto-detect fields" to fill it in.');
+      this.setStatus(
+        'Front page loaded. Click "Auto-detect fields" to fill it in.'
+      );
     } catch (e) {
       this.setStatus('');
       toast(`Could not open that file: ${e.message}`, 'error');
@@ -575,12 +652,17 @@ export class FrontPageEditor {
 
   async detect(useAI) {
     if (!this.img) return;
-    const btn = useAI ? $('#fp-detect-ai', this.root) : $('#fp-detect-ocr', this.root);
+    const btn = useAI
+      ? $('#fp-detect-ai', this.root)
+      : $('#fp-detect-ocr', this.root);
     btn.disabled = true;
     try {
       const provider = this.getProvider();
       if (useAI && !provider) {
-        toast('Set up an AI provider in "AI Settings" first, or use OCR detection.', 'error');
+        toast(
+          'Set up an AI provider in "AI Settings" first, or use OCR detection.',
+          'error'
+        );
         return;
       }
       const lines = await ocrLines(this.img.src, (m) => this.setStatus(m));
@@ -603,7 +685,11 @@ export class FrontPageEditor {
       const missing = items.filter((i) => !itemText(i)).length;
       this.setStatus(
         items.length
-          ? `Found ${items.length} field(s).${missing ? ` ${missing} have no value yet; fill them in below or in My Profile.` : ''} Drag text to fine-tune.`
+          ? `Found ${items.length} field(s).${
+              missing
+                ? ` ${missing} have no value yet; fill them in below or in My Profile.`
+                : ''
+            } Drag text to fine-tune.`
           : 'No blank fields recognised. Use "Add field" to place them manually.'
       );
     } catch (e) {
@@ -679,7 +765,12 @@ export class FrontPageEditor {
     let start = null;
     handle.addEventListener('pointerdown', (e) => {
       handle.setPointerCapture(e.pointerId);
-      start = { x: e.clientX, y: e.clientY, left: parseFloat(handle.style.left), top: parseFloat(handle.style.top) };
+      start = {
+        x: e.clientX,
+        y: e.clientY,
+        left: parseFloat(handle.style.left),
+        top: parseFloat(handle.style.top)
+      };
       start.moved = { x: 0, y: 0 };
       handle.classList.add('dragging');
     });
@@ -708,7 +799,12 @@ export class FrontPageEditor {
     handle.tabIndex = 0;
     handle.addEventListener('keydown', (e) => {
       const step = e.shiftKey ? 10 : 2;
-      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      const d = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step]
+      }[e.key];
       if (!d) return;
       e.preventDefault();
       shiftItem(item, d[0], d[1]);
@@ -730,7 +826,9 @@ export class FrontPageEditor {
         select.append(el('option', { value: f.key, text: f.label }));
       }
       if (item.key.startsWith('other:')) {
-        select.append(el('option', { value: item.key, text: `Other: ${item.label || ''}` }));
+        select.append(
+          el('option', { value: item.key, text: `Other: ${item.label || ''}` })
+        );
       }
       select.value = item.key;
       select.addEventListener('change', () => {
@@ -752,7 +850,12 @@ export class FrontPageEditor {
         this.positionHandles();
       });
 
-      const size = el('input', { type: 'number', min: '8', max: '200', 'aria-label': 'Text size' });
+      const size = el('input', {
+        type: 'number',
+        min: '8',
+        max: '200',
+        'aria-label': 'Text size'
+      });
       size.value = Math.round(item.size);
       size.addEventListener('change', () => {
         item.size = Math.max(8, Number(size.value) || item.size);
@@ -788,12 +891,19 @@ export class FrontPageEditor {
 
   async saveAsTemplate() {
     if (!this.img) return;
-    const name = window.prompt('Name this front page (e.g. "XYZ University – assignment"):');
+    const name = window.prompt(
+      'Name this front page (e.g. "XYZ University – assignment"):'
+    );
     if (!name) return;
     const id = uid();
     await putBlob(`frontpage-template:${id}`, this.img.src);
     const list = this.savedList();
-    list.push({ id, name, v: 2, items: this.state.items.map((i) => ({ ...i, value: '' })) });
+    list.push({
+      id,
+      name,
+      v: 2,
+      items: this.state.items.map((i) => ({ ...i, value: '' }))
+    });
     save('frontpage-templates', list);
     this.renderSaved();
     toast('Front page saved for reuse.', 'success');
@@ -813,14 +923,18 @@ export class FrontPageEditor {
             text: t.name,
             onclick: async () => {
               const dataUrl = await getBlob(`frontpage-template:${t.id}`);
-              if (!dataUrl) return toast('That saved image is missing.', 'error');
+              if (!dataUrl)
+                return toast('That saved image is missing.', 'error');
               await putBlob('frontpage-image', dataUrl);
               this.img = await loadImage(dataUrl);
               this.state = {
                 enabled: true,
                 hasImage: true,
                 v: 2,
-                items: migrateItems(t.items, t.v || 1).map((i) => ({ ...i, id: uid() }))
+                items: migrateItems(t.items, t.v || 1).map((i) => ({
+                  ...i,
+                  id: uid()
+                }))
               };
               this.persist();
               this.redraw();
@@ -832,7 +946,10 @@ export class FrontPageEditor {
             'aria-label': `Delete saved front page ${t.name}`,
             onclick: async () => {
               await deleteBlob(`frontpage-template:${t.id}`);
-              save('frontpage-templates', this.savedList().filter((x) => x.id !== t.id));
+              save(
+                'frontpage-templates',
+                this.savedList().filter((x) => x.id !== t.id)
+              );
               this.renderSaved();
             }
           })

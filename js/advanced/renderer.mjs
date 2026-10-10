@@ -44,14 +44,17 @@ function tokenize(text) {
     if (!part) continue;
     const em = /^\*\*[^*]+\*\*$/.test(part);
     const clean = em ? part.slice(2, -2) : part;
-    for (const word of clean.split(/\s+/)) if (word) tokens.push({ t: word, em });
+    for (const word of clean.split(/\s+/))
+      if (word) tokens.push({ t: word, em });
   }
   return tokens;
 }
 
 export function parseDocument(md) {
   const blocks = [];
-  const lines = String(md || '').replace(/\r\n/g, '\n').split('\n');
+  const lines = String(md || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n');
   let para = [];
   let gapBefore = false;
 
@@ -81,26 +84,43 @@ export function parseDocument(md) {
     if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) {
       flushPara();
       const type = ['', 'h1', 'h2', 'h3'][m[1].length];
-      blocks.push({ type, tokens: tokenize(m[2]), keepNext: true, gap: gapBefore || type !== 'h3' });
+      blocks.push({
+        type,
+        tokens: tokenize(m[2]),
+        keepNext: true,
+        gap: gapBefore || type !== 'h3'
+      });
       gapBefore = false;
       continue;
     }
     if ((m = /^[-*•]\s+(.*)$/.exec(line))) {
       flushPara();
-      blocks.push({ type: 'li', marker: '•', tokens: tokenize(m[1]), gap: false });
+      blocks.push({
+        type: 'li',
+        marker: '•',
+        tokens: tokenize(m[1]),
+        gap: false
+      });
       gapBefore = false;
       continue;
     }
     if ((m = /^(\d{1,3}|[a-z]|[ivx]{1,4})[.)]\s+(.*)$/i.exec(line))) {
       flushPara();
-      blocks.push({ type: 'li', marker: `${m[1]}.`, tokens: tokenize(m[2]), gap: false });
+      blocks.push({
+        type: 'li',
+        marker: `${m[1]}.`,
+        tokens: tokenize(m[2]),
+        gap: false
+      });
       gapBefore = false;
       continue;
     }
     para.push(line);
   }
   flushPara();
-  return blocks.filter((b) => b.type === 'break' || (b.tokens && b.tokens.length));
+  return blocks.filter(
+    (b) => b.type === 'break' || (b.tokens && b.tokens.length)
+  );
 }
 
 /* ------------------------------- Rendering ------------------------------- */
@@ -152,22 +172,30 @@ function createPage(style, index) {
   if (style.lines) {
     for (let i = 1; i <= g.lines + 1; i++) {
       const rule = document.createElement('div');
-      rule.style.cssText = `position:absolute;left:0;right:0;top:${g.top + i * g.L - 1}px;border-top:1px solid #a9bcd6;`;
+      rule.style.cssText = `position:absolute;left:0;right:0;top:${
+        g.top + i * g.L - 1
+      }px;border-top:1px solid #a9bcd6;`;
       page.append(rule);
     }
   }
   if (style.margin) {
     const v = document.createElement('div');
-    v.style.cssText = `position:absolute;top:0;bottom:0;left:${g.left - 10}px;border-left:2px solid #f3a0b5;`;
+    v.style.cssText = `position:absolute;top:0;bottom:0;left:${
+      g.left - 10
+    }px;border-left:2px solid #f3a0b5;`;
     const h = document.createElement('div');
-    h.style.cssText = `position:absolute;left:0;right:0;top:${g.top - 2}px;border-top:2px solid #f3a0b5;`;
+    h.style.cssText = `position:absolute;left:0;right:0;top:${
+      g.top - 2
+    }px;border-top:2px solid #f3a0b5;`;
     page.append(v, h);
   }
 
   const content = document.createElement('div');
   content.className = 'hw-content';
   content.style.cssText = `
-    position:absolute;left:${g.left}px;right:${g.right}px;top:${g.top + style.textOffset}px;
+    position:absolute;left:${g.left}px;right:${g.right}px;top:${
+    g.top + style.textOffset
+  }px;
     height:${g.contentH + Math.round(g.L / 2)}px;overflow:hidden;
   `;
   page.append(content);
@@ -185,18 +213,31 @@ function fits(page) {
 function renderBlock(block, page, style, { atTop, continued }) {
   const L = style.lineHeight;
   const node = document.createElement('div');
-  const isHeading = block.type === 'h1' || block.type === 'h2' || block.type === 'h3';
+  const isHeading =
+    block.type === 'h1' || block.type === 'h2' || block.type === 'h3';
   node.style.margin = '0';
   node.style.position = 'relative';
-  const gapLines = atTop || continued ? 0 : block.gap ? (isHeading ? 1 : Math.max(style.paragraphGap, 0)) : 0;
+  const gapLines =
+    atTop || continued
+      ? 0
+      : block.gap
+      ? isHeading
+        ? 1
+        : Math.max(style.paragraphGap, 0)
+      : 0;
   if (gapLines) node.style.marginTop = `${gapLines * L}px`;
 
   if (isHeading) {
     node.style.color = style.inkHeading;
-    const scale = block.type === 'h3' ? 1 : style.headingScale * (block.type === 'h1' ? 1.15 : 1);
+    const scale =
+      block.type === 'h3'
+        ? 1
+        : style.headingScale * (block.type === 'h1' ? 1.15 : 1);
     node.style.fontSize = `${style.fontSize * scale}px`;
-    if (style.headingBold) node.style.textShadow = '0 0 0.7px currentColor, 0.4px 0 0 currentColor';
-    if (block.type === 'h1' && style.titleCentered) node.style.textAlign = 'center';
+    if (style.headingBold)
+      node.style.textShadow = '0 0 0.7px currentColor, 0.4px 0 0 currentColor';
+    if (block.type === 'h1' && style.titleCentered)
+      node.style.textAlign = 'center';
   }
   if (block.type === 'li') {
     node.style.paddingLeft = '1.7em';
@@ -208,7 +249,8 @@ function renderBlock(block, page, style, { atTop, continued }) {
     }
   }
 
-  const underlineAll = isHeading && style.headingUnderline && block.type !== 'h3';
+  const underlineAll =
+    isHeading && style.headingUnderline && block.type !== 'h3';
   const h = Math.max(0, Math.min(3, Number(style.humanize) || 0));
   const offset = block.offset || 0;
   block.tokens.forEach((tok, i) => {
@@ -227,7 +269,9 @@ function renderBlock(block, page, style, { atTop, continued }) {
       let n = 0;
       const r = () => hashRandom(block.id, offset + i, n++);
       span.style.display = 'inline-block';
-      span.style.transform = `translateY(${((r() - 0.5) * 1.6 * h).toFixed(2)}px) rotate(${((r() - 0.5) * 1.4 * h).toFixed(2)}deg)`;
+      span.style.transform = `translateY(${((r() - 0.5) * 1.6 * h).toFixed(
+        2
+      )}px) rotate(${((r() - 0.5) * 1.4 * h).toFixed(2)}deg)`;
       span.style.opacity = (1 - r() * 0.12 * h).toFixed(2);
     }
     node.append(span);
@@ -242,21 +286,31 @@ function decoratePage(page, style, total, headerText) {
   if (style.pageHeader && headerText) {
     const head = document.createElement('div');
     head.textContent = headerText;
-    head.style.cssText = `position:absolute;left:${g.left}px;right:${g.right}px;top:${g.L * 1.15}px;
-      font-size:${style.fontSize * 0.85}px;line-height:${g.L}px;color:${style.inkBody};text-align:right;white-space:nowrap;overflow:hidden;`;
+    head.style.cssText = `position:absolute;left:${g.left}px;right:${
+      g.right
+    }px;top:${g.L * 1.15}px;
+      font-size:${style.fontSize * 0.85}px;line-height:${g.L}px;color:${
+      style.inkBody
+    };text-align:right;white-space:nowrap;overflow:hidden;`;
     page.el.append(head);
   }
   if (style.pageNumbers) {
     const num = document.createElement('div');
     num.textContent = `${page.index + 1}${total > 1 ? '' : ''}`;
-    num.style.cssText = `position:absolute;right:${g.right + 4}px;bottom:${Math.round(g.L * 0.15)}px;
-      font-size:${style.fontSize * 0.85}px;line-height:${g.L}px;color:${style.inkBody};`;
+    num.style.cssText = `position:absolute;right:${
+      g.right + 4
+    }px;bottom:${Math.round(g.L * 0.15)}px;
+      font-size:${style.fontSize * 0.85}px;line-height:${g.L}px;color:${
+      style.inkBody
+    };`;
     page.el.append(num);
   }
   if (style.effect === 'shadows' || style.effect === 'scanner') {
     const overlay = document.createElement('div');
     const angle =
-      style.effect === 'scanner' ? 50 + Math.floor(page.random() * 71) : Math.floor(page.random() * 360);
+      style.effect === 'scanner'
+        ? 50 + Math.floor(page.random() * 71)
+        : Math.floor(page.random() * 360);
     overlay.style.cssText = `position:absolute;inset:0;pointer-events:none;
       background:linear-gradient(${angle}deg, #0005, #0000);`;
     page.el.append(overlay);
@@ -267,7 +321,12 @@ function decoratePage(page, style, total, headerText) {
  * Lays the blocks out across pages inside `stage` (must be in the document so
  * text can be measured). Returns the page elements.
  */
-export function paginate(blocks, style, stage, { headerText = '', maxPages = 200 } = {}) {
+export function paginate(
+  blocks,
+  style,
+  stage,
+  { headerText = '', maxPages = 200 } = {}
+) {
   stage.textContent = '';
   const pages = [];
   let page = createPage(style, 0);
@@ -285,7 +344,8 @@ export function paginate(blocks, style, stage, { headerText = '', maxPages = 200
     }
     queue.unshift(...moved);
     pages.push(page);
-    if (pages.length >= maxPages) throw new Error(`Document is longer than ${maxPages} pages.`);
+    if (pages.length >= maxPages)
+      throw new Error(`Document is longer than ${maxPages} pages.`);
     page = createPage(style, pages.length);
     stage.append(page.el);
   };
@@ -306,14 +366,21 @@ export function paginate(blocks, style, stage, { headerText = '', maxPages = 200
     node.remove();
 
     // Find how many words fit on this page (binary search).
-    const canSplit = block.tokens.length > 1 && (!block.keepNext || atTop || block.type === 'p');
+    const canSplit =
+      block.tokens.length > 1 &&
+      (!block.keepNext || atTop || block.type === 'p');
     let best = 0;
     if (canSplit) {
       let lo = 1;
       let hi = block.tokens.length - 1;
       while (lo <= hi) {
         const mid = (lo + hi) >> 1;
-        node = renderBlock({ ...block, tokens: block.tokens.slice(0, mid) }, page, style, opts);
+        node = renderBlock(
+          { ...block, tokens: block.tokens.slice(0, mid) },
+          page,
+          style,
+          opts
+        );
         page.content.append(node);
         const ok = fits(page);
         node.remove();
@@ -327,7 +394,12 @@ export function paginate(blocks, style, stage, { headerText = '', maxPages = 200
     }
 
     if (best > 0) {
-      const head = renderBlock({ ...block, tokens: block.tokens.slice(0, best) }, page, style, opts);
+      const head = renderBlock(
+        { ...block, tokens: block.tokens.slice(0, best) },
+        page,
+        style,
+        opts
+      );
       head._block.keepNext = false;
       page.content.append(head);
       queue.unshift({
@@ -371,7 +443,8 @@ function contrast(canvas, amount = 0.55) {
 }
 
 export async function capturePages(pageEls, style, onProgress = () => {}) {
-  if (typeof window.html2canvas !== 'function') throw new Error('html2canvas is not loaded');
+  if (typeof window.html2canvas !== 'function')
+    throw new Error('html2canvas is not loaded');
   const out = [];
   for (let i = 0; i < pageEls.length; i++) {
     onProgress(`Rendering page ${i + 1} of ${pageEls.length}…`);

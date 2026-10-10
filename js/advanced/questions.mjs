@@ -17,8 +17,13 @@ const SUBPART_RE = /^\s*(?:\(?[a-hivx]{1,4}[).]|[a-h]\s*[.)])\s+/i;
 
 function normalizeQuestion(q, i) {
   const text = String(q.text || '').trim();
-  const marks = String(q.marks || '').trim() || ((MARKS_RE.exec(text) || [])[1] || (MARKS_RE.exec(text) || [])[2] || '');
-  const wordLimit = String(q.wordLimit || '').trim() || ((WORDS_RE.exec(text) || [])[1] || '');
+  const marks =
+    String(q.marks || '').trim() ||
+    (MARKS_RE.exec(text) || [])[1] ||
+    (MARKS_RE.exec(text) || [])[2] ||
+    '';
+  const wordLimit =
+    String(q.wordLimit || '').trim() || (WORDS_RE.exec(text) || [])[1] || '';
   return {
     id: uid(),
     number: String(q.number || i + 1).trim(),
@@ -29,7 +34,9 @@ function normalizeQuestion(q, i) {
 }
 
 export function extractBasic(rawText) {
-  const lines = String(rawText || '').replace(/\r\n/g, '\n').split('\n');
+  const lines = String(rawText || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n');
   const questions = [];
   const preamble = [];
   let current = null;
@@ -41,7 +48,11 @@ export function extractBasic(rawText) {
     const m = Q_START_RE.exec(trimmed);
     // Accept the next number in sequence (or a restart at 1) as a new question,
     // which avoids treating "2 marks" or years inside text as question starts.
-    if (m && m[2] !== undefined && (Number(m[1]) === expected || (Number(m[1]) === 1 && !current))) {
+    if (
+      m &&
+      m[2] !== undefined &&
+      (Number(m[1]) === expected || (Number(m[1]) === 1 && !current))
+    ) {
       current = { number: m[1], text: m[2].trim() };
       questions.push(current);
       expected = Number(m[1]) + 1;
@@ -58,7 +69,12 @@ export function extractBasic(rawText) {
       .split(/\n\s*\n/)
       .map((p) => p.trim())
       .filter((p) => p.length > 10)
-      .forEach((p, i) => questions.push({ number: String(i + 1), text: p.replace(/\s*\n\s*/g, ' ') }));
+      .forEach((p, i) =>
+        questions.push({
+          number: String(i + 1),
+          text: p.replace(/\s*\n\s*/g, ' ')
+        })
+      );
   }
 
   return {
@@ -88,8 +104,15 @@ function chunkText(text) {
 /**
  * source: { text, pdfFile?, pdfBase64? }
  */
-export async function extractWithAI(source, provider, { onProgress = () => {}, signal } = {}) {
-  const usePdf = provider.pdf && source.pdfBase64 && source.pdfBase64.length < 30 * 1024 * 1024;
+export async function extractWithAI(
+  source,
+  provider,
+  { onProgress = () => {}, signal } = {}
+) {
+  const usePdf =
+    provider.pdf &&
+    source.pdfBase64 &&
+    source.pdfBase64.length < 30 * 1024 * 1024;
   const results = [];
 
   if (usePdf) {
@@ -123,7 +146,9 @@ export async function extractWithAI(source, provider, { onProgress = () => {}, s
             system: EXTRACT_SYSTEM,
             prompt:
               (chunks.length > 1
-                ? `This is part ${i + 1} of ${chunks.length} of the paper. Extract the questions that appear in this part only.\n\n`
+                ? `This is part ${i + 1} of ${
+                    chunks.length
+                  } of the paper. Extract the questions that appear in this part only.\n\n`
                 : '') + `Assessment text:\n"""\n${chunks[i]}\n"""`,
             jsonSchema: QUESTIONS_SCHEMA,
             effort: 'low',
@@ -141,7 +166,9 @@ export async function extractWithAI(source, provider, { onProgress = () => {}, s
     .filter((q) => q && String(q.text || '').trim())
     .map(normalizeQuestion);
   if (!questions.length) {
-    throw new AIError('The AI did not find any questions. Try "Find questions (no AI)" or paste them manually.');
+    throw new AIError(
+      'The AI did not find any questions. Try "Find questions (no AI)" or paste them manually.'
+    );
   }
   return {
     title: String(first.title || '').trim(),

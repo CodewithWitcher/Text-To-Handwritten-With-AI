@@ -12,7 +12,14 @@ export const PROFILE_FIELDS = [
   {
     key: 'name',
     label: 'Full name',
-    labels: ['name of the student', 'name of student', 'student name', 'student s name', 'submitted by', 'name']
+    labels: [
+      'name of the student',
+      'name of student',
+      'student name',
+      'student s name',
+      'submitted by',
+      'name'
+    ]
   },
   {
     key: 'rollNo',
@@ -23,9 +30,22 @@ export const PROFILE_FIELDS = [
     key: 'enrollmentNo',
     label: 'Enrollment / Registration no.',
     labels: [
-      'enrollment number', 'enrolment number', 'enrollment no', 'enrolment no', 'enrollment', 'enrolment',
-      'registration number', 'registration no', 'registration', 'reg no',
-      'student id', 'id no', 'prn', 'usn', 'uid', 'admission no'
+      'enrollment number',
+      'enrolment number',
+      'enrollment no',
+      'enrolment no',
+      'enrollment',
+      'enrolment',
+      'registration number',
+      'registration no',
+      'registration',
+      'reg no',
+      'student id',
+      'id no',
+      'prn',
+      'usn',
+      'uid',
+      'admission no'
     ]
   },
   {
@@ -36,7 +56,17 @@ export const PROFILE_FIELDS = [
   {
     key: 'phone',
     label: 'Phone',
-    labels: ['phone number', 'phone no', 'mobile number', 'mobile no', 'contact number', 'contact no', 'phone', 'mobile', 'contact']
+    labels: [
+      'phone number',
+      'phone no',
+      'mobile number',
+      'mobile no',
+      'contact number',
+      'contact no',
+      'phone',
+      'mobile',
+      'contact'
+    ]
   },
   {
     key: 'email',
@@ -46,17 +76,41 @@ export const PROFILE_FIELDS = [
   {
     key: 'university',
     label: 'University',
-    labels: ['name of the university', 'name of university', 'university name', 'university']
+    labels: [
+      'name of the university',
+      'name of university',
+      'university name',
+      'university'
+    ]
   },
   {
     key: 'college',
     label: 'College / Institute',
-    labels: ['name of the college', 'name of college', 'name of the institute', 'college name', 'institute name', 'college', 'institute', 'school']
+    labels: [
+      'name of the college',
+      'name of college',
+      'name of the institute',
+      'college name',
+      'institute name',
+      'college',
+      'institute',
+      'school'
+    ]
   },
   {
     key: 'course',
     label: 'Programme / Course',
-    labels: ['name of the programme', 'name of the program', 'programme name', 'program name', 'programme', 'program', 'degree', 'course', 'class']
+    labels: [
+      'name of the programme',
+      'name of the program',
+      'programme name',
+      'program name',
+      'programme',
+      'program',
+      'degree',
+      'course',
+      'class'
+    ]
   },
   {
     key: 'programmeCode',
@@ -66,7 +120,14 @@ export const PROFILE_FIELDS = [
   {
     key: 'branch',
     label: 'Branch / Department',
-    labels: ['department', 'branch', 'dept', 'stream', 'specialization', 'specialisation']
+    labels: [
+      'department',
+      'branch',
+      'dept',
+      'stream',
+      'specialization',
+      'specialisation'
+    ]
   },
   {
     key: 'semester',
@@ -86,17 +147,36 @@ export const PROFILE_FIELDS = [
   {
     key: 'regionalCentre',
     label: 'Regional centre',
-    labels: ['regional centre code', 'regional center code', 'regional centre', 'regional center']
+    labels: [
+      'regional centre code',
+      'regional center code',
+      'regional centre',
+      'regional center'
+    ]
   },
   {
     key: 'studyCentre',
     label: 'Study centre',
-    labels: ['study centre code', 'study center code', 'study centre', 'study center']
+    labels: [
+      'study centre code',
+      'study center code',
+      'study centre',
+      'study center'
+    ]
   },
   {
     key: 'subject',
     label: 'Subject / Course title',
-    labels: ['subject name', 'name of subject', 'name of the course', 'course title', 'course tittle', 'course name', 'paper name', 'subject']
+    labels: [
+      'subject name',
+      'name of subject',
+      'name of the course',
+      'course title',
+      'course tittle',
+      'course name',
+      'paper name',
+      'subject'
+    ]
   },
   {
     key: 'subjectCode',
@@ -107,8 +187,18 @@ export const PROFILE_FIELDS = [
     key: 'submittedTo',
     label: 'Submitted to (teacher)',
     labels: [
-      'submitted to', 'faculty name', 'name of the faculty', 'name of faculty', 'name of the teacher', 'faculty',
-      'teacher', 'instructor', 'professor', 'guided by', 'guide', 'supervisor'
+      'submitted to',
+      'faculty name',
+      'name of the faculty',
+      'name of faculty',
+      'name of the teacher',
+      'faculty',
+      'teacher',
+      'instructor',
+      'professor',
+      'guided by',
+      'guide',
+      'supervisor'
     ]
   },
   {
@@ -198,7 +288,9 @@ export function renderProfileForm(container, onChange) {
       saveProfile(profile);
       onChange && onChange();
     });
-    grid.append(el('div', {}, [el('label.block', { for: id, text: f.label }), input]));
+    grid.append(
+      el('div', {}, [el('label.block', { for: id, text: f.label }), input])
+    );
   }
   container.append(grid);
 
@@ -206,7 +298,9 @@ export function renderProfileForm(container, onChange) {
   const renderCustom = () => {
     customWrap.textContent = '';
     profile.custom.forEach((c, idx) => {
-      const label = el('input', { placeholder: 'Field label (e.g. Lab Batch)' });
+      const label = el('input', {
+        placeholder: 'Field label (e.g. Lab Batch)'
+      });
       label.value = c.label;
       const value = el('input', { placeholder: 'Value' });
       value.value = c.value || '';
@@ -243,7 +337,8 @@ export function renderProfileForm(container, onChange) {
   container.append(
     el('h4', { text: 'Custom fields' }),
     el('p.adv-hint', {
-      text: 'Add anything else your front pages ask for. The label is what we look for on the page.'
+      text:
+        'Add anything else your front pages ask for. The label is what we look for on the page.'
     }),
     customWrap,
     el('button', {

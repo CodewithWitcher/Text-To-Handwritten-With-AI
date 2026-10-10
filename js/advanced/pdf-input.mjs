@@ -19,7 +19,12 @@ function itemsToText(items) {
   for (const item of items) {
     if (!('str' in item)) continue;
     const y = item.transform ? Math.round(item.transform[5]) : lastY;
-    if (lastY !== null && y !== null && Math.abs(y - lastY) > 2 && current.trim()) {
+    if (
+      lastY !== null &&
+      y !== null &&
+      Math.abs(y - lastY) > 2 &&
+      current.trim()
+    ) {
       lines.push(current.trimEnd());
       current = '';
     }
@@ -38,7 +43,10 @@ function itemsToText(items) {
  * Extracts text from a PDF. Pages with no text layer (scans) are OCR'd.
  * onProgress(message) is called with human-readable progress.
  */
-export async function extractPdfText(file, { onProgress = () => {}, ocr = true } = {}) {
+export async function extractPdfText(
+  file,
+  { onProgress = () => {}, ocr = true } = {}
+) {
   const pdf = await openPdf(file);
   const pages = [];
   const scanned = [];
@@ -56,7 +64,9 @@ export async function extractPdfText(file, { onProgress = () => {}, ocr = true }
     const worker = await Tesseract.createWorker('eng');
     try {
       for (const n of scanned) {
-        onProgress(`Page ${n} looks scanned, running OCR (this can take a while)…`);
+        onProgress(
+          `Page ${n} looks scanned, running OCR (this can take a while)…`
+        );
         const img = await renderPageToDataUrl(pdf, n, 2);
         const { data } = await worker.recognize(img);
         pages[n - 1] = (data.text || '').trim();
@@ -65,7 +75,12 @@ export async function extractPdfText(file, { onProgress = () => {}, ocr = true }
       await worker.terminate();
     }
   }
-  return { text: pages.join('\n\n'), pages, numPages: pdf.numPages, scannedPages: scanned };
+  return {
+    text: pages.join('\n\n'),
+    pages,
+    numPages: pdf.numPages,
+    scannedPages: scanned
+  };
 }
 
 async function renderPageToDataUrl(pdf, n, scale = 2) {
@@ -102,7 +117,11 @@ export async function ocrLines(imageDataUrl, onProgress = () => {}) {
     }
   });
   try {
-    const { data } = await worker.recognize(imageDataUrl, {}, { blocks: true, text: true });
+    const { data } = await worker.recognize(
+      imageDataUrl,
+      {},
+      { blocks: true, text: true }
+    );
     const lines = [];
     if (Array.isArray(data.lines) && data.lines.length) {
       lines.push(...data.lines);

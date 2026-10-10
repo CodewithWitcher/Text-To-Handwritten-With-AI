@@ -16,7 +16,8 @@ export const BUILTIN_TEMPLATES = [
   {
     id: 'qa-standard',
     name: 'University assignment (Q&A)',
-    description: 'Each question as a heading, then "Ans." and a structured answer. Length scales with marks.',
+    description:
+      'Each question as a heading, then "Ans." and a structured answer. Length scales with marks.',
     kind: 'qa',
     titleBlock: true,
     questionFormat: 'Q{n}. {question}',
@@ -35,7 +36,8 @@ export const BUILTIN_TEMPLATES = [
   {
     id: 'qa-short',
     name: 'Short answers',
-    description: 'Concise, to-the-point answers. Good for 2–5 mark questions and class tests.',
+    description:
+      'Concise, to-the-point answers. Good for 2–5 mark questions and class tests.',
     kind: 'qa',
     titleBlock: true,
     questionFormat: 'Q{n}. {question}',
@@ -52,7 +54,8 @@ export const BUILTIN_TEMPLATES = [
   {
     id: 'qa-detailed',
     name: 'Detailed / long answers',
-    description: 'Introduction, explained body with sub-headings, examples, advantages/disadvantages, conclusion.',
+    description:
+      'Introduction, explained body with sub-headings, examples, advantages/disadvantages, conclusion.',
     kind: 'qa',
     titleBlock: true,
     questionFormat: 'Q{n}. {question}',
@@ -70,7 +73,8 @@ export const BUILTIN_TEMPLATES = [
   {
     id: 'essay',
     name: 'Essay / article',
-    description: 'Continuous prose with a title, introduction, themed sections and conclusion. Questions become topics.',
+    description:
+      'Continuous prose with a title, introduction, themed sections and conclusion. Questions become topics.',
     kind: 'essay',
     titleBlock: true,
     questionFormat: '{question}',
@@ -88,7 +92,8 @@ export const BUILTIN_TEMPLATES = [
   {
     id: 'lab-report',
     name: 'Lab report / practical',
-    description: 'Aim, Apparatus/Requirements, Theory, Procedure, Observations, Result, Conclusion.',
+    description:
+      'Aim, Apparatus/Requirements, Theory, Procedure, Observations, Result, Conclusion.',
     kind: 'qa',
     titleBlock: true,
     questionFormat: 'Experiment {n}: {question}',
@@ -141,7 +146,12 @@ export function getTemplate(id) {
 
 export function duplicateTemplate(id) {
   const base = getTemplate(id);
-  const copy = { ...base, id: `custom-${uid()}`, name: `${base.name} (copy)`, custom: true };
+  const copy = {
+    ...base,
+    id: `custom-${uid()}`,
+    name: `${base.name} (copy)`,
+    custom: true
+  };
   const list = customTemplates();
   list.push(copy);
   saveCustomTemplates(list);
@@ -153,8 +163,13 @@ export function duplicateTemplate(id) {
 export function targetWords(question, template) {
   if (question.wordLimit) return Number(question.wordLimit);
   const marks = parseFloat(question.marks);
-  const words = marks > 0 ? marks * template.wordsPerMark : template.defaultWords;
-  return Math.round(Math.min(template.maxWords, Math.max(template.minWords, words)) / 10) * 10;
+  const words =
+    marks > 0 ? marks * template.wordsPerMark : template.defaultWords;
+  return (
+    Math.round(
+      Math.min(template.maxWords, Math.max(template.minWords, words)) / 10
+    ) * 10
+  );
 }
 
 /* -------------------------------- Prompts -------------------------------- */
@@ -178,9 +193,12 @@ export function answerUserPrompt({ question, template, context, docInfo }) {
     docInfo.title && `Assessment: ${docInfo.title}`,
     docInfo.subject && `Subject: ${docInfo.subject}`,
     context && `Student context:\n${context}`,
-    docInfo.instructions && `General instructions from the paper:\n${docInfo.instructions}`,
+    docInfo.instructions &&
+      `General instructions from the paper:\n${docInfo.instructions}`,
     '',
-    `Question ${question.number || ''}${question.marks ? ` (${question.marks} marks)` : ''}:`,
+    `Question ${question.number || ''}${
+      question.marks ? ` (${question.marks} marks)` : ''
+    }:`,
     question.text,
     '',
     `Write the answer in about ${words} words.`
@@ -231,12 +249,19 @@ export function bulkCopyPrompt({ questions, template, context, docInfo }) {
   const blocks = questions
     .map(
       (q, i) =>
-        `=== QUESTION ${i + 1} ===${q.marks ? ` (${q.marks} marks)` : ''} [about ${targetWords(q, template)} words]\n${q.text}`
+        `=== QUESTION ${i + 1} ===${
+          q.marks ? ` (${q.marks} marks)` : ''
+        } [about ${targetWords(q, template)} words]\n${q.text}`
     )
     .join('\n\n');
   return `${answerSystemPrompt(template)}
 
-${[docInfo.title && `Assessment: ${docInfo.title}`, docInfo.subject && `Subject: ${docInfo.subject}`, context, docInfo.instructions && `Instructions: ${docInfo.instructions}`]
+${[
+  docInfo.title && `Assessment: ${docInfo.title}`,
+  docInfo.subject && `Subject: ${docInfo.subject}`,
+  context,
+  docInfo.instructions && `Instructions: ${docInfo.instructions}`
+]
   .filter(Boolean)
   .join('\n')}
 
@@ -250,10 +275,12 @@ export function parseBulkAnswers(text, count) {
   const re = /^\s*=+\s*ANSWER\s+(\d+)\s*=+\s*$/gim;
   const marks = [];
   let m;
-  while ((m = re.exec(text))) marks.push({ n: Number(m[1]), start: m.index, end: re.lastIndex });
+  while ((m = re.exec(text)))
+    marks.push({ n: Number(m[1]), start: m.index, end: re.lastIndex });
   marks.forEach((mk, i) => {
     const next = marks[i + 1] ? marks[i + 1].start : text.length;
-    if (mk.n >= 1 && mk.n <= count) out[mk.n - 1] = text.slice(mk.end, next).trim();
+    if (mk.n >= 1 && mk.n <= count)
+      out[mk.n - 1] = text.slice(mk.end, next).trim();
   });
   return out;
 }
@@ -269,18 +296,32 @@ function normalizeAnswer(md) {
     .trim();
 }
 
-export function composeDocument({ template, questions, answers, docInfo, options = {} }) {
+export function composeDocument({
+  template,
+  questions,
+  answers,
+  docInfo,
+  options = {}
+}) {
   const lines = [];
   if (template.titleBlock) {
-    const title = docInfo.title || (template.kind === 'essay' ? '' : 'Assignment');
+    const title =
+      docInfo.title || (template.kind === 'essay' ? '' : 'Assignment');
     if (title) lines.push(`# ${title}`);
-    if (docInfo.subject && options.subjectLine !== false) lines.push(`### Subject: ${docInfo.subject}`);
+    if (docInfo.subject && options.subjectLine !== false)
+      lines.push(`### Subject: ${docInfo.subject}`);
     lines.push('');
   }
   questions.forEach((q, i) => {
-    const n = q.number ? String(q.number).replace(/^Q\.?\s*/i, '') : String(i + 1);
-    const qText = String(q.text || '').trim().replace(/\n+/g, ' ');
-    let heading = template.questionFormat.replace('{n}', n).replace('{question}', qText);
+    const n = q.number
+      ? String(q.number).replace(/^Q\.?\s*/i, '')
+      : String(i + 1);
+    const qText = String(q.text || '')
+      .trim()
+      .replace(/\n+/g, ' ');
+    let heading = template.questionFormat
+      .replace('{n}', n)
+      .replace('{question}', qText);
     if (template.showMarks && q.marks) heading += ` [${q.marks} marks]`;
     lines.push(`## ${heading}`);
     if (template.answerLabel) lines.push(`**${template.answerLabel}**`);
@@ -288,5 +329,10 @@ export function composeDocument({ template, questions, answers, docInfo, options
     lines.push('');
     if (options.pageBreakBetween && i < questions.length - 1) lines.push('---');
   });
-  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  return (
+    lines
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() + '\n'
+  );
 }
