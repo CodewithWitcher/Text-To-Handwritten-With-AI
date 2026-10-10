@@ -330,9 +330,15 @@ export function composeDocument({
     const n = q.number
       ? String(q.number).replace(/^Q\.?\s*/i, '')
       : String(i + 1);
-    const qText = String(q.text || '')
+    let qText = String(q.text || '')
       .trim()
       .replace(/\n+/g, ' ');
+    // "(10 marks)" at the end of the question is shown once, as [10 marks].
+    if (template.showMarks && q.marks) {
+      qText = qText
+        .replace(/\s*[[(]\s*\d+(?:\.\d+)?\s*marks?\s*[\])]\s*$/i, '')
+        .trim();
+    }
     let heading = template.questionFormat
       .replace('{n}', n)
       .replace('{question}', qText);
