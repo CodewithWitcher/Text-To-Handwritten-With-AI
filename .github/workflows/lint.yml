@@ -9,4 +9,4 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npx eslint "js/**/*.mjs"
+      - run: npx eslint "js/**/*.mjs" bin/cli.mjs

@@ -142,7 +142,7 @@ let proxyAvailable = null;
 async function hasProxy() {
   if (proxyAvailable !== null) return proxyAvailable;
   try {
-    const res = await fetch('/api/health', { cache: 'no-store' });
+    const res = await fetch('api/health', { cache: 'no-store' });
     proxyAvailable = res.ok && (await res.json()).proxy === true;
   } catch (e) {
     proxyAvailable = false;
@@ -154,7 +154,7 @@ async function httpJSON(url, { method = 'POST', headers = {}, body, signal }) {
   let res;
   try {
     if (await hasProxy()) {
-      res = await fetch('/api/proxy', {
+      res = await fetch('api/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, method, headers, body }),
@@ -174,7 +174,7 @@ async function httpJSON(url, { method = 'POST', headers = {}, body, signal }) {
       `Could not reach the AI provider. ${
         proxyAvailable
           ? ''
-          : 'Start the app with "python3 server.py" to avoid browser CORS blocks. '
+          : 'This provider may block requests from websites (CORS). Run the app locally with "npx text-to-handwriting-ai" to fix this. '
       }(${e.message})`,
       { retryable: true }
     );

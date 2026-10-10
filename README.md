@@ -4,7 +4,17 @@ Turn typed text into realistic handwritten pages, or build a complete handwritte
 
 <img width="400" alt="Sample handwritten output" src="sample.jpeg" />
 
-Maintained by [CodewithWitcher](https://github.com/CodewithWitcher).
+Maintained by [CodewithWitcher](https://github.com/CodewithWitcher). Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Use it
+
+| Option | How | Best for |
+| --- | --- | --- |
+| **Online** | Open **https://codewithwitcher.github.io/Text-To-Handwritten-With-AI/** | Trying it out, nothing to install |
+| **One command** | `npx text-to-handwriting-ai` (needs [Node.js](https://nodejs.org) 18+) | Every AI provider, fully on your machine |
+| **From source** | Clone the repo, then `npm start` or `python3 server.py` | Contributing |
+
+Your data stays in your browser in every option. The online version calls AI providers straight from your browser. Claude and DeepSeek allow that, but some providers block it (CORS). If a provider fails online, use the one-command option: it runs a small local relay that works with all of them.
 
 ## Two modes
 
@@ -32,14 +42,21 @@ A guided, four-step flow:
 
 ## Run locally
 
-Requires Python 3.8+ (no other dependencies).
+**One command, no clone:**
 
 ```bash
-python3 server.py            # http://127.0.0.1:8080
-python3 server.py --port 8090
+npx text-to-handwriting-ai              # opens http://127.0.0.1:8080
+npx text-to-handwriting-ai --port 9000 --no-open
 ```
 
-The server serves the app and relays AI requests to the provider you choose, so browsers don't block them (CORS). Classic mode also works from any static file server.
+**From a clone** (no dependencies needed to run):
+
+```bash
+npm start              # Node 18+
+python3 server.py      # or Python 3.8+, same behaviour
+```
+
+Both serve the app and relay AI requests to the provider you choose, so browsers don't block them (CORS). If the port is busy, the next free one is used.
 
 > macOS: port 5000 is taken by AirPlay Receiver, which is why the default is 8080.
 
@@ -68,7 +85,8 @@ Own content and the final text step use this formatting:
 
 ```
 index.html              Page shell: Classic markup + Advanced markup
-server.py               Local server + AI request relay (stdlib only)
+bin/cli.mjs             `npx text-to-handwriting-ai` launcher (Node, no deps)
+server.py               Same local server + AI relay in Python (stdlib only)
 js/app.mjs              Classic mode (original behaviour)
 js/mode-switch.mjs      Classic / Advanced switch (lazy-loads Advanced)
 js/config.mjs           Repository / author links
@@ -92,6 +110,10 @@ css/advanced.css        Advanced mode styles
 - [Tesseract.js](https://github.com/naptha/tesseract.js): OCR for front pages and scanned papers
 - [Anthropic TypeScript SDK](https://github.com/anthropics/anthropic-sdk-typescript): Claude integration
 - [Cypress](https://github.com/cypress-io/cypress): end-to-end tests (`npm test`, with the server running)
+
+## Contributing
+
+Bug reports, front-page layouts that don't detect well, new templates and fixes are all welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get set up, and follow our [Code of Conduct](CODE_OF_CONDUCT.md). To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## Responsible use
 

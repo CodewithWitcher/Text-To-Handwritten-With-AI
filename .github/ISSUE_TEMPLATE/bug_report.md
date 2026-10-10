@@ -1,38 +1,33 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Something doesn't work as expected
 title: ''
-labels: ''
+labels: bug
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**What happened?**
+A clear description of the problem.
 
-**To Reproduce**
-Steps to reproduce the behavior:
+**Steps to reproduce**
 1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+2. Click on '...'
+3. See the error
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**What did you expect to happen?**
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Where were you running it?**
+- [ ] Online (GitHub Pages)
+- [ ] `npx text-to-handwriting-ai`
+- [ ] From source (`npm start` / `python3 server.py`)
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**Mode:** Classic / Advanced
+**Browser and version:** e.g. Chrome 140
+**Operating system:** e.g. Windows 11, macOS 15
+**AI provider (if relevant):** e.g. Claude, DeepSeek, none
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Screenshots or files**
+For front-page or question-paper problems, please attach the file **with personal details removed**.
 
-**Additional context**
-Add any other context about the problem here.
+**Errors in the browser console (if any)**
+Open DevTools (F12) → Console and paste any red errors here.

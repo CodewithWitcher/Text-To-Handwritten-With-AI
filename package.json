@@ -1,40 +1,65 @@
 {
   "name": "text-to-handwriting-ai",
   "version": "2.0.0",
-  "description": "Convert text into realistic handwritten pages, with an Advanced mode for AI-assisted assignments, front pages and templates.",
-  "main": "js/app.mjs",
-  "scripts": {
-    "test": "cypress run",
-    "eslint": "eslint --fix \"js/**/**.mjs\"",
-    "prettier": "prettier --write \"./index.html\" \"js/**/**.mjs\" \"css/**.css\"",
-    "format": "npm run prettier",
-    "cy": "cypress open",
-    "dev": "python3 server.py",
-    "start": "python3 server.py"
+  "description": "Turn typed text into realistic handwritten pages and full assignments (front page, AI answers, templates). Runs locally in your browser.",
+  "keywords": [
+    "handwriting",
+    "text-to-handwriting",
+    "assignment",
+    "pdf",
+    "ai",
+    "claude",
+    "deepseek",
+    "front-page",
+    "ignou"
+  ],
+  "homepage": "https://codewithwitcher.github.io/Text-To-Handwritten-With-AI/",
+  "bugs": {
+    "url": "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI.git"
   },
-  "keywords": [],
-  "author": "CodewithWitcher (https://github.com/CodewithWitcher)",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/issues"
+  "author": "CodewithWitcher (https://github.com/CodewithWitcher)",
+  "main": "bin/cli.mjs",
+  "bin": {
+    "text-to-handwriting-ai": "bin/cli.mjs"
   },
-  "homepage": "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI#readme",
+  "files": [
+    "bin/",
+    "index.html",
+    "manifest.webmanifest",
+    "css/",
+    "js/",
+    "fonts/",
+    "images/",
+    "sample.jpeg",
+    "server.py",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node bin/cli.mjs",
+    "dev": "node bin/cli.mjs --no-open",
+    "start:python": "python3 server.py",
+    "test": "cypress run",
+    "lint": "eslint \"js/**/*.mjs\" bin/cli.mjs",
+    "eslint": "eslint --fix \"js/**/*.mjs\"",
+    "prettier": "prettier --write \"./index.html\" \"js/**/*.mjs\" \"css/**.css\"",
+    "format": "npm run prettier",
+    "cy": "cypress open"
+  },
   "devDependencies": {
     "cypress": "^4.4.1",
     "eslint": "^7.0.0",
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.3",
-    "husky": "^4.2.5",
     "prettier": "^2.0.5"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run prettier && eslint . --fix && npm run eslint"
-    }
   }
 }

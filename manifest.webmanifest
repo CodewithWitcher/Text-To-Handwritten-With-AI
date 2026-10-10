@@ -1,6 +1,6 @@
 {
-  "name": "Text to Handwriting",
-  "short_name": "Text to Handwriting",
+  "name": "Text to Handwriting AI",
+  "short_name": "Handwriting AI",
   "icons": [
     {
       "src": "images/android-chrome-192x192.png",
@@ -17,5 +17,5 @@
   "background_color": "#ddd",
   "display": "standalone",
   "start_url": ".",
-  "description": "I hate writing assignments so I made this tool that converts text to an image that looks like handwriting😛"
+  "description": "Turn typed text into realistic handwritten pages and full assignments."
 }
