@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "text-to-handwriting-ai"
+version = "2.0.0"
+description = "Turn typed text into realistic handwritten pages and full assignments (front page, AI answers, templates). Runs locally in your browser."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+authors = [{ name = "CodewithWitcher" }]
+keywords = ["handwriting", "text-to-handwriting", "assignment", "pdf", "ai", "front-page", "ignou"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Environment :: Web Environment",
+  "Topic :: Education",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://codewithwitcher.github.io/Text-To-Handwritten-With-AI/"
+Source = "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI"
+Issues = "https://github.com/CodewithWitcher/Text-To-Handwritten-With-AI/issues"
+
+[project.scripts]
+text-to-handwriting-ai = "text_to_handwriting_ai.server:main"
+
+# The website files are kept once, at the repo root, and copied into the
+# package at build time (text_to_handwriting_ai/web/).
+[tool.hatch.build.targets.wheel]
+packages = ["text_to_handwriting_ai"]
+exclude = ["**/._*", "**/.DS_Store", "**/__pycache__"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"index.html" = "text_to_handwriting_ai/web/index.html"
+"manifest.webmanifest" = "text_to_handwriting_ai/web/manifest.webmanifest"
+"sample.jpeg" = "text_to_handwriting_ai/web/sample.jpeg"
+"css" = "text_to_handwriting_ai/web/css"
+"js" = "text_to_handwriting_ai/web/js"
+"fonts" = "text_to_handwriting_ai/web/fonts"
+"images" = "text_to_handwriting_ai/web/images"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "text_to_handwriting_ai/",
+  "index.html",
+  "manifest.webmanifest",
+  "sample.jpeg",
+  "css/",
+  "js/",
+  "fonts/",
+  "images/",
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+exclude = ["**/._*", "**/.DS_Store", "**/__pycache__"]

@@ -21,7 +21,7 @@ We aim to reply within 7 days and to fix confirmed issues as quickly as possible
 Things we especially want to hear about:
 
 - API keys or personal data leaving the browser other than to the AI provider the user selected.
-- The local relay (`bin/cli.mjs` or `server.py`) being usable by other websites, reaching non-allowed addresses, or serving files outside the app folder.
+- The local relay (`bin/cli.mjs` or `text_to_handwriting_ai/server.py`) being usable by other websites, reaching non-allowed addresses, or serving files outside the app folder.
 - Script injection from uploaded files, imported JSON, AI responses or front-page text.
 
 ## How the app handles data

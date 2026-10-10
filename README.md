@@ -11,7 +11,8 @@ Maintained by [CodewithWitcher](https://github.com/CodewithWitcher). Contributio
 | Option | How | Best for |
 | --- | --- | --- |
 | **Online** | Open **https://codewithwitcher.github.io/Text-To-Handwritten-With-AI/** | Trying it out, nothing to install |
-| **One command** | `npx text-to-handwriting-ai` (needs [Node.js](https://nodejs.org) 18+) | Every AI provider, fully on your machine |
+| **One command (Python)** | `pipx run text-to-handwriting-ai` or `uvx text-to-handwriting-ai` (Python 3.8+) | Every AI provider, fully on your machine |
+| **One command (Node)** | `npx text-to-handwriting-ai` ([Node.js](https://nodejs.org) 18+) | Same, if you have Node instead of Python |
 | **From source** | Clone the repo, then `npm start` or `python3 server.py` | Contributing |
 
 Your data stays in your browser in every option. The online version calls AI providers straight from your browser. Claude and DeepSeek allow that, but some providers block it (CORS). If a provider fails online, use the one-command option: it runs a small local relay that works with all of them.
@@ -42,12 +43,17 @@ A guided, four-step flow:
 
 ## Run locally
 
-**One command, no clone:**
+**One command, no clone.** Use whichever you have:
 
 ```bash
-npx text-to-handwriting-ai              # opens http://127.0.0.1:8080
-npx text-to-handwriting-ai --port 9000 --no-open
+pipx run text-to-handwriting-ai         # Python (pipx)
+uvx text-to-handwriting-ai              # Python (uv)
+npx text-to-handwriting-ai              # Node.js
 ```
+
+Each one opens http://127.0.0.1:8080 in your browser. Options: `--port 9000`, `--no-open`, `--host 0.0.0.0` (to reach it from other devices on your network).
+
+To keep it installed instead: `pip install text-to-handwriting-ai`, then run `text-to-handwriting-ai`.
 
 **From a clone** (no dependencies needed to run):
 
@@ -86,7 +92,9 @@ Own content and the final text step use this formatting:
 ```
 index.html              Page shell: Classic markup + Advanced markup
 bin/cli.mjs             `npx text-to-handwriting-ai` launcher (Node, no deps)
-server.py               Same local server + AI relay in Python (stdlib only)
+text_to_handwriting_ai/ Same server + AI relay in Python (stdlib only); the pip package
+server.py               Runs the Python server from a clone
+pyproject.toml          pip package definition (bundles the site files at build time)
 js/app.mjs              Classic mode (original behaviour)
 js/mode-switch.mjs      Classic / Advanced switch (lazy-loads Advanced)
 js/config.mjs           Repository / author links

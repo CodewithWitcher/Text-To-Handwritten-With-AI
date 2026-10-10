@@ -12,5 +12,5 @@
 - [ ] Advanced mode works for the parts I changed
 - [ ] I downloaded a PDF and the pages have content (if rendering was touched)
 - [ ] `npm run lint` passes
-- [ ] If I changed `server.py` or `bin/cli.mjs`, I made the same change in the other
+- [ ] If I changed `text_to_handwriting_ai/server.py` or `bin/cli.mjs`, I made the same change in the other
 - [ ] No personal data or API keys are sent anywhere new

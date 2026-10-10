@@ -18,7 +18,7 @@ A clear description of the problem.
 
 **Where were you running it?**
 - [ ] Online (GitHub Pages)
-- [ ] `npx text-to-handwriting-ai`
+- [ ] `pipx run` / `uvx` / `npx text-to-handwriting-ai`
 - [ ] From source (`npm start` / `python3 server.py`)
 
 **Mode:** Classic / Advanced

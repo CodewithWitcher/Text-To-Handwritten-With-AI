@@ -49,14 +49,14 @@ Don't open `index.html` directly from disk (`file://`). Browsers block JavaScrip
 | Templates and AI prompts | `js/advanced/templates.mjs` |
 | AI providers | `js/advanced/llm.mjs` |
 | Profile, courses, saved data | `js/advanced/profile.mjs`, `js/advanced/store.mjs` |
-| Local server + AI relay | `bin/cli.mjs` (Node) and `server.py` (Python), which must behave the same |
+| Local server + AI relay | `bin/cli.mjs` (Node) and `text_to_handwriting_ai/server.py` (Python), which must behave the same |
 
 ## Rules for changes
 
 1. **Keep Classic mode working as it is.** New features go in Advanced mode (`js/advanced/`).
 2. **No build step and no new runtime dependencies** without discussing it first. Third-party browser libraries are loaded on demand from a pinned CDN version (see `js/advanced/loaders.mjs`).
 3. **Privacy first.** User data stays in the browser. Never send names, roll numbers or other personal details to an AI provider, never log API keys, and never add analytics or tracking.
-4. **Keep both servers in sync.** If you change `server.py`, make the same change in `bin/cli.mjs`, and the other way round.
+4. **Keep both servers in sync.** If you change `text_to_handwriting_ai/server.py`, make the same change in `bin/cli.mjs`, and the other way round.
 5. **Match the surrounding code.** Prettier and ESLint settings are in the repo: run `npm run format` and `npm run lint` before you commit.
 6. **Test in a real browser.** Check both Classic and Advanced mode, and download a PDF to confirm the pages have content. For layout changes, include a before/after screenshot in the pull request.
 
@@ -73,7 +73,10 @@ Commit messages should be short and in the imperative mood, such as "Fix date sl
 ## Releasing (maintainers)
 
 - **Website:** every push to `main` deploys to GitHub Pages through `.github/workflows/pages.yml`.
-- **npm package:** bump `version` in `package.json`, then run `npm publish`. Check the files first with `npm pack --dry-run`.
+- **npm and PyPI packages:**
+  1. Set the same new version in `package.json`, `pyproject.toml` and `text_to_handwriting_ai/__init__.py`, and add it to `CHANGELOG.md`.
+  2. Publish a GitHub Release with a tag like `v2.0.1`. `.github/workflows/release.yml` publishes to PyPI and npm.
+  3. To check what will be published: `npm pack --dry-run`, and `python -m build` (look inside `dist/`).
 
 ## License
 

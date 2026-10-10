@@ -11,7 +11,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 - Front-page filler: detects blanks on university front pages (OCR or AI), writes your details in your handwriting, and lets you edit, move or delete fields.
 - My Profile and My Courses, a downloadable JSON profile template, and backup/restore.
 - Course details found in question papers can be applied to the front page after confirmation.
-- `npx text-to-handwriting-ai` one-command launcher, and GitHub Pages deployment.
+- One-command launchers: `pipx run text-to-handwriting-ai` / `uvx text-to-handwriting-ai` (Python) and `npx text-to-handwriting-ai` (Node), plus GitHub Pages deployment.
 - QE Dave Mergens as the default handwriting font.
 
 ### Changed

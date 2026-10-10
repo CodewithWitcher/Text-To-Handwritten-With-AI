@@ -11,5 +11,5 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          start: python3 server.py --port 8080
+          start: python3 server.py --port 8080 --no-open
           wait-on: 'http://localhost:8080'
