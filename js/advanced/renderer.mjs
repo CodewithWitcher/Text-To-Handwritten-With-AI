@@ -363,12 +363,15 @@ export function paginate(
     let node = renderBlock(block, page, style, opts);
     page.content.append(node);
     if (fits(page)) continue;
+    // Long question headings (e.g. IGNOU "Q1. a) ... g)" spanning 20 lines) can't
+    // be kept whole: moving them would leave near-empty pages behind.
+    const tallHeading = node.offsetHeight > style.lineHeight * 3;
     node.remove();
 
     // Find how many words fit on this page (binary search).
     const canSplit =
       block.tokens.length > 1 &&
-      (!block.keepNext || atTop || block.type === 'p');
+      (!block.keepNext || atTop || block.type === 'p' || tallHeading);
     let best = 0;
     if (canSplit) {
       let lo = 1;
@@ -453,8 +456,11 @@ export async function capturePages(pageEls, style, onProgress = () => {}) {
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
-      scrollX: 0,
-      scrollY: 0
+      // html2canvas measures the element relative to the visible window, so it
+      // must be told the current scroll position. Without this, pages captured
+      // while the user is scrolled down (Download is at the bottom) are blank.
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY
     });
     if (style.effect === 'scanner') contrast(canvas);
     out.push(canvas.toDataURL('image/jpeg', 0.9));
