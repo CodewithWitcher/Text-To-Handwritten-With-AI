@@ -1305,7 +1305,7 @@ function renderQuestions() {
     // Shown only when the question has a figure: the chatbot needs it too.
     const figCaution = el('p.adv-hint.q-fig-caution', {
       text:
-        '⚠ This question has a figure. "Copy prompt" copies the prompt and the figure together: paste once into a chatbot that accepts images (ChatGPT, Claude.ai, Gemini) and check the image is attached before sending. If only one of them arrives, use "Copy text only" or "Copy figure" for the missing part.'
+        '⚠ This question has a figure. "Copy prompt" copies one picture with the prompt printed above the figure: paste it once into a chatbot that accepts images (ChatGPT, Gemini, Claude.ai) and send. If the chat asks for text, type "Answer the question in this image". "Copy text only" and "Copy figure" copy the parts separately.'
     });
     const copyFigBtn = el('button.adv-small', {
       type: 'button',
@@ -1704,7 +1704,7 @@ function renderQuestions() {
             // With a figure: text and image on the clipboard together.
             if (figures.length && (await copyTextWithImages(prompt, figures))) {
               return toast(
-                'Prompt and figure copied. Paste once into the chat. If only one of them arrives, use "Copy text only" or "Copy figure" for the missing part.',
+                'Copied as one picture: the prompt with the figure under it. Paste it once into the chat and send.',
                 'success'
               );
             }

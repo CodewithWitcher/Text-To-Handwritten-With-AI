@@ -290,50 +290,97 @@ export async function copyImagesToClipboard(ids) {
   }
 }
 
-const escapeHtml = (t) =>
-  t.replace(
-    /[&<>"]/g,
-    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])
+/**
+ * One picture holding the prompt (printed at the top) and the figures below
+ * it. Chat sites keep only the image when a paste has both an image and
+ * text, so the prompt has to travel inside the image to arrive in one paste.
+ */
+async function promptSheet(text, ids) {
+  const figs = await stackImages(ids);
+  if (!figs) return null;
+  const W = Math.max(1400, Math.min(2000, figs.width));
+  const pad = 48;
+  const size = 26;
+  const lineH = Math.round(size * 1.45);
+  const font = `${size}px Arial, Helvetica, sans-serif`;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = font;
+  // Wrap each paragraph to the sheet width (long words are cut).
+  const maxW = W - pad * 2;
+  const lines = [];
+  for (const para of String(text).split('\n')) {
+    if (!para.trim()) {
+      lines.push('');
+      continue;
+    }
+    let line = '';
+    for (const word of para.split(/\s+/)) {
+      const tryLine = line ? `${line} ${word}` : word;
+      if (ctx.measureText(tryLine).width <= maxW || !line) line = tryLine;
+      else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    lines.push(line);
+  }
+  const label = 'FIGURE FROM THE QUESTION PAPER:';
+  const textH = lines.length * lineH;
+  const figScale = Math.min(1, maxW / figs.width);
+  const figH = Math.round(figs.height * figScale);
+  c.width = W;
+  c.height = pad + textH + lineH * 2 + figH + pad;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = '#000';
+  ctx.font = font;
+  ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, pad, pad + i * lineH));
+  let y = pad + textH + lineH * 0.6;
+  ctx.font = `bold ${font}`;
+  ctx.fillText(label, pad, y);
+  y += lineH * 1.4;
+  ctx.drawImage(
+    figs,
+    pad + (maxW - figs.width * figScale) / 2,
+    y,
+    figs.width * figScale,
+    figH
   );
+  return c;
+}
 
 /**
- * Copies a prompt and its figures in one go. The clipboard gets three
- * versions of the same thing and each chat site takes what it supports:
- * plain text, rich text (HTML with the figure inside) and the image itself.
+ * Copies a prompt and its figures in one go, as one image with the prompt
+ * printed above the figure (what chat sites keep when you paste), plus the
+ * plain text for sites that only take text.
  */
 export async function copyTextWithImages(text, ids) {
   try {
     // Must be called straight from the click, before any await: write()
-    // starts immediately and the image parts follow as promises. Waiting for
-    // the image first loses the click, and browsers then drop parts of the
-    // copy (e.g. the text).
-    const canvas = stackImages(ids).then((c) => {
+    // starts immediately and the image follows as a promise. Waiting for
+    // the image first loses the click.
+    const sheet = promptSheet(text, ids).then((c) => {
       if (!c) throw new Error('No image');
-      return c;
+      return pngBlob(c);
     });
-    const html = canvas.then(
-      (c) =>
-        new Blob(
-          [
-            `<div>${escapeHtml(text).replace(
-              /\n/g,
-              '<br>'
-            )}</div><img src="${c.toDataURL('image/png')}" alt="Figure">`
-          ],
-          { type: 'text/html' }
-        )
-    );
     await navigator.clipboard.write([
       new ClipboardItem({
         'text/plain': new Blob([text], { type: 'text/plain' }),
-        'text/html': html,
-        'image/png': canvas.then(pngBlob)
+        'image/png': sheet
       })
     ]);
     return true;
   } catch (e) {
     return false;
   }
+}
+
+/** The prompt sheet as a PNG data URL (for checking what gets copied). */
+export async function promptSheetDataUrl(text, ids) {
+  const c = await promptSheet(text, ids);
+  return c ? c.toDataURL('image/png') : null;
 }
 
 /** Downloads the figures as image files (when the clipboard is blocked). */
