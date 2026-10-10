@@ -1,30 +1,28 @@
 {
-  "name": "text-to-handwriting",
-  "version": "1.0.0-rc.1",
-  "description": "Hey everyone! text-to-handwriting is a tool that lets you generate image that looks like handwriting from text.",
-  "main": "js/app.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "name": "text-to-handwriting-ai",
+  "version": "2.0.0",
+  "description": "Convert text into realistic handwritten pages, with an Advanced mode for AI-assisted assignments, front pages and templates.",
+  "main": "js/app.mjs",
   "scripts": {
     "test": "cypress run",
     "eslint": "eslint --fix \"js/**/**.mjs\"",
     "prettier": "prettier --write \"./index.html\" \"js/**/**.mjs\" \"css/**.css\"",
     "format": "npm run prettier",
     "cy": "cypress open",
-    "dev": "serve ."
+    "dev": "python3 server.py",
+    "start": "python3 server.py"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/saurabhdaware/text-to-handwriting.git"
+    "url": "git+https://github.com/CodewithWitcher/text-to-handwriting-ai.git"
   },
   "keywords": [],
-  "author": "Saurabh Daware <saurabhdaware99@gmail.com> (https://saurabhdaware.in/)",
+  "author": "CodewithWitcher (https://github.com/CodewithWitcher)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/saurabhdaware/text-to-handwriting/issues"
+    "url": "https://github.com/CodewithWitcher/text-to-handwriting-ai/issues"
   },
-  "homepage": "https://github.com/saurabhdaware/text-to-handwriting#readme",
+  "homepage": "https://github.com/CodewithWitcher/text-to-handwriting-ai#readme",
   "devDependencies": {
     "cypress": "^4.4.1",
     "eslint": "^7.0.0",
@@ -32,8 +30,7 @@
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.3",
     "husky": "^4.2.5",
-    "prettier": "^2.0.5",
-    "serve": "^11.3.2"
+    "prettier": "^2.0.5"
   },
   "husky": {
     "hooks": {

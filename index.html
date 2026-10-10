@@ -1,22 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=UA-125454191-4"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag('js', new Date());
-
-      gtag('config', 'UA-125454191-4');
-    </script>
-
     <!-- Mobile Specific Metas -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -25,45 +9,30 @@
     <meta name="theme-color" content="#09f" />
     <meta
       name="description"
-      content="I hate writing assignments so I made this tool that converts text to an image that looks like handwriting. You can copy paste text content into the textbox and click generate image button to generate image. Text to Handwriting"
+      content="Convert typed text into realistic handwritten pages. Classic mode for quick conversions, Advanced mode for full assignments with front pages, templates and AI-generated answers."
     />
     <meta
       name="keywords"
-      content="text to handwriting, text-to-handwrting, saurabh text to handwriting, convert text to image, write assignment online"
+      content="text to handwriting, handwritten assignment, handwriting generator, AI assignment writer, CodewithWitcher"
     />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="author" content="Saurabh Daware" />
-    <meta name="copyright" content="Saurabh Daware" />
+    <meta name="author" content="CodewithWitcher" />
+    <meta name="copyright" content="CodewithWitcher" />
     <meta name="robots" content="follow" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Text to Handwriting" />
+    <meta property="og:title" content="Text to Handwriting AI" />
     <meta
       property="og:url"
-      content="https://saurabhdaware.github.io/text-to-handwriting"
+      content="https://github.com/CodewithWitcher/text-to-handwriting-ai"
     />
     <meta
       property="og:description"
-      content="I hate writing assignments so I made this tool that converts text to an image that looks like handwriting. You can copy paste text content into the textbox and click generate image button to generate image. Text to Handwriting"
+      content="Convert typed text into realistic handwritten pages, with AI-assisted assignments."
     />
-    <meta property="og:site_name" content="Text to Handwriting" />
+    <meta property="og:site_name" content="Text to Handwriting AI" />
+    <meta property="og:image" itemprop="image" content="sample.jpeg" />
 
-    <meta
-      property="og:image:secure_url"
-      itemprop="image"
-      content="https://res.cloudinary.com/saurabhdaware/image/upload/v1585413874/saurabh2019/projects/text-to-handwriting.png"
-    />
-    <meta
-      property="og:image"
-      itemprop="image"
-      content="https://res.cloudinary.com/saurabhdaware/image/upload/v1585413874/saurabh2019/projects/text-to-handwriting.png"
-    />
-    <meta property="og:image:width" content="600" />
-    <meta property="og:image:height" content="337" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:creator" content="@saurabhcodes" />
-
-    <title>Text to Handwriting</title>
+    <title>Text to Handwriting AI</title>
 
     <!-- Favicons -->
     <link
@@ -93,33 +62,48 @@
       href="https://fonts.googleapis.com/css?family=Homemade+Apple|Roboto|Caveat|Liu+Jian+Mao+Cao&display=swap"
     />
 
+    <!-- Extra handwriting fonts for Advanced mode -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Kalam&family=Indie+Flower&family=Shadows+Into+Light&family=Gloria+Hallelujah&family=Reenie+Beanie&family=Nanum+Pen+Script&family=Dawning+of+a+New+Day&family=Cedarville+Cursive&display=swap"
+    />
+
     <!-- CSS -->
     <link rel="stylesheet" href="./css/index.css" />
     <link rel="stylesheet" href="./css/features.css" />
+    <link rel="stylesheet" href="./css/advanced.css" />
   </head>
 
   <body>
-    <main>
-      <button
-        aria-label="Activate Dark Mode"
-        title="Toggle Dark Mode"
-        aria-pressed="false"
-        onclick="toggleTheme(this)"
-        class="dark-mode-toggle"
-      >
-        <span class="sun">
-          <img
-            alt="sun icon that represents light mode"
-            width="35px"
-            src="images/sun.svg"
-        /></span>
-        <span class="moon"
-          ><img
-            alt="moon icon to represent dark mode "
-            width="25px"
-            src="images/moon.svg"
-        /></span>
+    <nav class="mode-switch" role="tablist" aria-label="Choose mode">
+      <button role="tab" id="mode-classic" aria-selected="true" type="button">
+        Classic
       </button>
+      <button role="tab" id="mode-advanced" aria-selected="false" type="button">
+        Advanced <small>(AI)</small>
+      </button>
+    </nav>
+    <button
+      aria-label="Activate Dark Mode"
+      title="Toggle Dark Mode"
+      aria-pressed="false"
+      onclick="toggleTheme(this)"
+      class="dark-mode-toggle"
+    >
+      <span class="sun">
+        <img
+          alt="sun icon that represents light mode"
+          width="35px"
+          src="images/sun.svg"
+      /></span>
+      <span class="moon"
+        ><img
+          alt="moon icon to represent dark mode "
+          width="25px"
+          src="images/moon.svg"
+      /></span>
+    </button>
+    <main id="classic-app">
       <h1>Text to Handwriting</h1>
       <section class="generate-image-section">
         <br /><br />
@@ -438,41 +422,6 @@
         </div>
       </section>
 
-      <section id="sponsors">
-        <h2>🤗 Sponsors</h2>
-        <p>
-          This tool is completely free and neither stores any of your data for
-          money so maybe you can consider being patron or making an one time
-          payment with buy me a coffee to help the creator 🤗
-        </p>
-        <p>
-          <a href="https://www.patreon.com/bePatron?u=31891872">
-            <img
-              loading="lazy"
-              style="border-radius: 4px;"
-              alt="Buy me a Coffee Button"
-              width="200"
-              src="https://c5.patreon.com/external/logo/become_a_patron_button.png"
-            />
-          </a>
-          &nbsp;
-          <a href="https://www.buymeacoffee.com/saurabhdaware">
-            <img
-              loading="lazy"
-              style="border-radius: 4px;"
-              alt="Buy me a Coffee Button"
-              width="200"
-              src="https://cdn.buymeacoffee.com/buttons/default-yellow.png"
-            />
-          </a>
-        </p>
-      </section>
-
-      <section id="github-contributors">
-        <h2>👫 GitHub Contributors</h2>
-        <div class="project-contributors" id="project-contributors"></div>
-      </section>
-
       <section id="faq">
         <h2>❓ FAQs (Frequently Asked Questions)</h2>
         <div>
@@ -503,27 +452,393 @@
           </p>
         </div>
         <div>
-          <h3>4. Where can I request for features and report bugs?</h3>
+          <h3>4. Where can I request features and report bugs?</h3>
           <p>
-            You can't. This is a read-only project and there will not be any
-            improvements in the project
+            Open an issue on the
+            <a
+              class="repo-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://github.com/CodewithWitcher/text-to-handwriting-ai/issues"
+              >GitHub repository</a
+            >.
           </p>
         </div>
       </section>
     </main>
+
+    <!-- ADVANCED MODE (js/advanced/*). Classic mode above is untouched. -->
+    <section id="advanced-app" class="adv" hidden>
+      <h1>Text to Handwriting <span class="adv-badge">Advanced</span></h1>
+      <p class="adv-lead">
+        Build a complete handwritten assignment: pick a template, add your
+        university front page, upload the question paper, let AI draft the
+        answers (or paste your own) and download a ready PDF. Your data stays
+        in this browser.
+      </p>
+
+      <div class="adv-tabs" role="tablist" aria-label="Advanced sections">
+        <button role="tab" type="button" data-tab="create" aria-selected="true">Create</button>
+        <button role="tab" type="button" data-tab="profile" aria-selected="false">My Profile</button>
+        <button role="tab" type="button" data-tab="ai" aria-selected="false">AI Settings</button>
+        <button role="tab" type="button" data-tab="templates" aria-selected="false">Templates</button>
+      </div>
+
+      <!-- ============================ CREATE ============================ -->
+      <div class="adv-panel" data-panel="create" role="tabpanel">
+        <!-- STEP 1 -->
+        <details class="adv-step" id="step-style" open>
+          <summary><span class="num">1</span> Template &amp; handwriting</summary>
+          <div class="adv-step-body adv-two-col">
+            <div>
+              <fieldset>
+                <legend>Assessment template</legend>
+                <label class="block" for="adv-template">Template</label>
+                <select id="adv-template"></select>
+                <p class="adv-hint" id="adv-template-desc"></p>
+              </fieldset>
+
+              <fieldset>
+                <legend>Handwriting</legend>
+                <div class="adv-grid">
+                  <div>
+                    <label class="block" for="st-font">Font</label>
+                    <select id="st-font"></select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-font-file">Upload your own font (.ttf/.otf)</label>
+                    <input id="st-font-file" type="file" accept=".ttf,.otf,.woff,.woff2" />
+                  </div>
+                  <div>
+                    <label class="block" for="st-fontSize">Text size (px)</label>
+                    <input id="st-fontSize" type="number" min="8" max="40" step="0.5" />
+                  </div>
+                  <div>
+                    <label class="block" for="st-inkBody">Answer ink</label>
+                    <select id="st-inkBody">
+                      <option value="#000f55">Blue</option>
+                      <option value="#1b1b1b">Black</option>
+                      <option value="#ba3807">Red</option>
+                      <option value="#0b5d1e">Green</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-inkHeading">Heading ink</label>
+                    <select id="st-inkHeading">
+                      <option value="#000000">Black</option>
+                      <option value="#000f55">Blue</option>
+                      <option value="#ba3807">Red</option>
+                      <option value="#0b5d1e">Green</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-humanize">Natural variation</label>
+                    <select id="st-humanize">
+                      <option value="0">Off (like a font)</option>
+                      <option value="1">Subtle</option>
+                      <option value="2">Medium</option>
+                      <option value="3">Strong</option>
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Headings</legend>
+                <div class="adv-grid">
+                  <label class="adv-check"><input id="st-headingUnderline" type="checkbox" /> Underline headings</label>
+                  <label class="adv-check"><input id="st-headingBold" type="checkbox" /> Darker headings</label>
+                  <label class="adv-check"><input id="st-titleCentered" type="checkbox" /> Center the title</label>
+                  <div>
+                    <label class="block" for="st-headingScale">Heading size</label>
+                    <select id="st-headingScale">
+                      <option value="1">Same as text</option>
+                      <option value="1.12">Slightly larger</option>
+                      <option value="1.25">Larger</option>
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Page</legend>
+                <div class="adv-grid">
+                  <label class="adv-check"><input id="st-lines" type="checkbox" /> Ruled lines</label>
+                  <label class="adv-check"><input id="st-margin" type="checkbox" /> Margin</label>
+                  <label class="adv-check"><input id="st-pageHeader" type="checkbox" /> Name &amp; roll no. on every page</label>
+                  <label class="adv-check"><input id="st-pageNumbers" type="checkbox" /> Page numbers</label>
+                  <label class="adv-check"><input id="st-pageBreakBetween" type="checkbox" /> Each question on a new page</label>
+                  <div>
+                    <label class="block" for="st-paragraphGap">Gap between paragraphs</label>
+                    <select id="st-paragraphGap">
+                      <option value="0">None</option>
+                      <option value="1">One line</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-effect">Effect</label>
+                    <select id="st-effect">
+                      <option value="shadows">Shadows</option>
+                      <option value="scanner">Scanner</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-resolution">Resolution</label>
+                    <select id="st-resolution">
+                      <option value="1.5">Low (smaller PDF)</option>
+                      <option value="2">Normal</option>
+                      <option value="3">High</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block" for="st-textOffset">Text vertical offset (px)</label>
+                    <input id="st-textOffset" type="number" min="-15" max="15" step="1" />
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+            <div class="adv-preview-col">
+              <p class="adv-hint">Live preview</p>
+              <div id="style-preview" class="adv-page-preview"></div>
+            </div>
+          </div>
+        </details>
+
+        <!-- STEP 2 -->
+        <details class="adv-step" id="step-frontpage">
+          <summary><span class="num">2</span> Front page <small>(optional)</small></summary>
+          <div class="adv-step-body" id="fp-root">
+            <label class="adv-check"><input id="fp-enabled" type="checkbox" /> Add a front page to the PDF</label>
+            <div id="fp-empty">
+              <p class="adv-hint">
+                Upload your university/college front page as an image or PDF.
+                We find the blanks (Name, Roll No., Subject…) and write your
+                details from <b>My Profile</b> in your handwriting.
+              </p>
+              <input id="fp-file" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" />
+            </div>
+            <div id="fp-saved" class="adv-chips"></div>
+            <div id="fp-editor" hidden>
+              <div class="adv-toolbar">
+                <button type="button" id="fp-detect-ocr">Auto-detect fields</button>
+                <button type="button" id="fp-detect-ai">Smart detect (AI)</button>
+                <button type="button" id="fp-add">+ Add field</button>
+                <button type="button" id="fp-clear-fields">Clear fields</button>
+                <button type="button" id="fp-save-template">Save for reuse</button>
+                <button type="button" id="fp-download">Download image</button>
+                <button type="button" id="fp-remove" class="delete-button">Remove</button>
+                <label class="adv-file-btn">Replace<input id="fp-file-replace" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" /></label>
+              </div>
+              <p id="fp-status" class="adv-status" role="status"></p>
+              <div class="fp-layout">
+                <div class="fp-canvas-wrap">
+                  <canvas id="fp-canvas"></canvas>
+                  <div id="fp-handles"></div>
+                </div>
+                <div>
+                  <p class="adv-hint">Field · value (leave empty to use your profile) · size</p>
+                  <div id="fp-fields"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- STEP 3 -->
+        <details class="adv-step" id="step-content" open>
+          <summary><span class="num">3</span> Questions &amp; answers</summary>
+          <div class="adv-step-body">
+            <div class="adv-segmented" role="radiogroup" aria-label="Content source">
+              <label><input type="radio" name="src" value="pdf" /> Upload question paper (PDF)</label>
+              <label><input type="radio" name="src" value="paste" /> Paste questions</label>
+              <label><input type="radio" name="src" value="own" /> Write / paste my own content</label>
+            </div>
+
+            <div data-src="pdf">
+              <input id="src-pdf-file" type="file" accept="application/pdf,.pdf,.txt" />
+              <p id="src-pdf-info" class="adv-hint"></p>
+            </div>
+            <div data-src="paste">
+              <label class="block" for="src-paste-text">Paste the questions (numbered like "1." or "Q1")</label>
+              <textarea id="src-paste-text" rows="8" placeholder="Q1. Explain the OSI model. (10 marks)&#10;Q2. What is TCP? (5 marks)"></textarea>
+            </div>
+            <div data-src="pdf paste" class="adv-toolbar">
+              <button type="button" id="find-ai" class="generate-image-button">Find questions (AI)</button>
+              <button type="button" id="find-basic">Find questions (no AI)</button>
+              <span id="find-status" class="adv-status" role="status"></span>
+            </div>
+
+            <div data-src="pdf paste" id="qa-area">
+              <div class="adv-grid adv-docinfo">
+                <div>
+                  <label class="block" for="doc-title">Assignment title</label>
+                  <input id="doc-title" placeholder="e.g. Assignment 2 – Computer Networks" />
+                </div>
+                <div>
+                  <label class="block" for="doc-subject">Subject</label>
+                  <input id="doc-subject" />
+                </div>
+                <div class="span-2">
+                  <label class="block" for="doc-instructions">Instructions for the answers (optional)</label>
+                  <input id="doc-instructions" placeholder="e.g. Attempt all questions, give examples from Indian context" />
+                </div>
+              </div>
+
+              <div class="adv-toolbar">
+                <button type="button" id="gen-all" class="generate-image-button">Generate all answers (AI)</button>
+                <button type="button" id="gen-missing">Generate missing only</button>
+                <button type="button" id="gen-stop" class="delete-button" hidden>Stop</button>
+                <span id="gen-status" class="adv-status" role="status"></span>
+              </div>
+
+              <details class="adv-manual">
+                <summary>No API key? Use any chatbot (ChatGPT, Claude.ai, DeepSeek…)</summary>
+                <ol class="adv-hint">
+                  <li>Click <b>Copy prompt</b>. It contains every question plus the template's rules.</li>
+                  <li>Paste it into the chatbot and copy its full reply.</li>
+                  <li>Paste the reply below and click <b>Import answers</b>.</li>
+                </ol>
+                <div class="adv-toolbar">
+                  <button type="button" id="copy-prompt">Copy prompt</button>
+                </div>
+                <textarea id="bulk-answers" rows="6" placeholder="=== ANSWER 1 ===&#10;…&#10;=== ANSWER 2 ===&#10;…"></textarea>
+                <div class="adv-toolbar"><button type="button" id="import-answers">Import answers</button></div>
+              </details>
+
+              <div id="questions-list"></div>
+              <button type="button" id="add-question">+ Add question</button>
+            </div>
+
+            <div data-src="own">
+              <div class="adv-toolbar" id="own-toolbar">
+                <button type="button" data-insert="# ">Title</button>
+                <button type="button" data-insert="## ">Heading</button>
+                <button type="button" data-insert="### ">Sub-heading</button>
+                <button type="button" data-insert="- ">Bullet</button>
+                <button type="button" data-insert="1. ">Numbered</button>
+                <button type="button" data-wrap="**">Underline</button>
+                <button type="button" data-insert="&#10;---&#10;">Page break</button>
+              </div>
+              <textarea id="own-text" rows="16" placeholder="# My Assignment&#10;&#10;## Q1. What is an operating system?&#10;**Ans.**&#10;An operating system is…&#10;&#10;### Functions&#10;- Process management&#10;- Memory management"></textarea>
+              <p class="adv-hint">
+                Formatting: <code># Title</code>, <code>## Heading</code>,
+                <code>### Sub-heading</code>, <code>- bullet</code>,
+                <code>1. numbered</code>, <code>**underlined**</code>,
+                <code>---</code> for a new page. A blank line starts a new paragraph.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <!-- STEP 4 -->
+        <details class="adv-step" id="step-build" open>
+          <summary><span class="num">4</span> Preview &amp; download</summary>
+          <div class="adv-step-body">
+            <div class="adv-toolbar">
+              <button type="button" id="build-doc">Build document</button>
+              <button type="button" id="render-pages" class="generate-image-button">Render pages</button>
+              <span id="build-status" class="adv-status" role="status"></span>
+            </div>
+            <details class="adv-manual" id="doc-text-wrap">
+              <summary>Edit the final text before rendering</summary>
+              <textarea id="doc-text" rows="14"></textarea>
+            </details>
+            <div id="pages-preview" class="adv-pages"></div>
+            <div class="adv-toolbar">
+              <button type="button" id="download-pdf" class="imp-button" disabled>Download PDF</button>
+              <button type="button" id="download-images" disabled>Download page images</button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- =========================== PROFILE =========================== -->
+      <div class="adv-panel" data-panel="profile" role="tabpanel" hidden>
+        <p class="adv-hint">
+          Saved only in this browser. Used to fill front pages and the page
+          header. Only academic details (course, subject…) are shared with the
+          AI for context; your name and IDs are never sent.
+        </p>
+        <div id="profile-form"></div>
+        <div class="adv-toolbar adv-data-actions">
+          <button type="button" id="data-export">Export my data (JSON)</button>
+          <label class="adv-file-btn">Import data<input id="data-import" type="file" accept="application/json,.json" /></label>
+          <button type="button" id="data-clear" class="delete-button">Delete all saved data</button>
+        </div>
+      </div>
+
+      <!-- ========================== AI SETTINGS ========================== -->
+      <div class="adv-panel" data-panel="ai" role="tabpanel" hidden>
+        <div class="adv-grid">
+          <div class="span-2">
+            <label class="block" for="ai-provider">Provider</label>
+            <select id="ai-provider"></select>
+          </div>
+          <div class="span-2" data-ai="key">
+            <label class="block" for="ai-key">API key <a id="ai-key-link" target="_blank" rel="noopener noreferrer">get a key ↗</a></label>
+            <div class="adv-row">
+              <input id="ai-key" type="password" autocomplete="off" spellcheck="false" />
+              <button type="button" id="ai-key-show">Show</button>
+            </div>
+          </div>
+          <div data-ai="model">
+            <label class="block" for="ai-model">Model</label>
+            <input id="ai-model" list="ai-model-list" spellcheck="false" />
+            <datalist id="ai-model-list"></datalist>
+          </div>
+          <div data-ai="model">
+            <label class="block">&nbsp;</label>
+            <button type="button" id="ai-fetch-models">Load available models</button>
+          </div>
+          <div class="span-2" data-ai="base">
+            <label class="block" for="ai-base">Base URL</label>
+            <input id="ai-base" spellcheck="false" placeholder="https://your-endpoint/v1" />
+          </div>
+          <label class="adv-check span-2" data-ai="model"><input id="ai-vision" type="checkbox" /> Model can read images (used for smarter front-page detection)</label>
+        </div>
+        <div class="adv-toolbar">
+          <button type="button" id="ai-test" class="generate-image-button">Test connection</button>
+          <span id="ai-status" class="adv-status" role="status"></span>
+        </div>
+        <p class="adv-hint">
+          Keys are stored only in this browser (localStorage) and sent only to
+          the provider you choose. Run the app with <code>python3 server.py</code>
+          so non-Claude providers work without browser CORS errors. Choose
+          <b>No AI</b> to use the copy-paste workflow instead.
+        </p>
+      </div>
+
+      <!-- =========================== TEMPLATES =========================== -->
+      <div class="adv-panel" data-panel="templates" role="tabpanel" hidden>
+        <p class="adv-hint">
+          Templates decide how questions are headed and how answers are written.
+          Built-in templates are read-only. Duplicate one to customise it.
+        </p>
+        <div class="adv-two-col">
+          <div id="tpl-list" class="adv-list"></div>
+          <div id="tpl-editor"></div>
+        </div>
+      </div>
+
+      <!-- Off-screen stage used to measure and render pages -->
+      <div id="hw-stage" aria-hidden="true"></div>
+    </section>
     <footer style="padding: 40px 0px 10px 0px;">
-      Thank you for using Text to Handwriting! You can follow me on
-      <a href="https://twitter.com/saurabhcodes">Twitter @saurabhcodes</a>
-      <br /><br />Do star the
-      <a href="https://github.com/saurabhdaware/text-to-handwriting"
-        >Text-to-Handwriting GitHub Repository</a
+      Text to Handwriting AI is maintained by
+      <a class="author-link" href="https://github.com/CodewithWitcher"
+        >CodewithWitcher</a
+      >. Source code on
+      <a
+        class="repo-link"
+        href="https://github.com/CodewithWitcher/text-to-handwriting-ai"
+        >GitHub</a
+      >.
+      <br /><br />
+      <small
+        >Based on the MIT-licensed text-to-handwriting project. See
+        LICENSE.</small
       >
-      and If you're using it for writing assignments, make sure you use it at
-      your own risk and If it fails and your teacher finds this tool, ask them
-      to star my GitHub as well :D <br />
-      <br />byeeee! <br /><br />
-      ~ Saurabh (<a href="https://saurabhdaware.in">https://saurabhdaware.in</a
-      >)
     </footer>
 
     <!-- Fixed Elements -->
@@ -571,7 +886,7 @@
     <!-- GitHub Corner logo -->
     <a
       tabindex="0"
-      href="https://github.com/saurabhdaware/text-to-handwriting"
+      href="https://github.com/CodewithWitcher/text-to-handwriting-ai"
       rel="noopener noreferrer"
       target="_blank"
       class="github-corner"
@@ -611,7 +926,8 @@
       crossorigin="anonymous"
     ></script>
     <script type="module" src="js/app.mjs"></script>
-    <script defer src="https://unpkg.com/jspdf@^1/dist/jspdf.min.js"></script>
+    <script type="module" src="js/mode-switch.mjs"></script>
+    <script defer src="https://unpkg.com/jspdf@1.5.3/dist/jspdf.min.js"></script>
     <script>
       function toggleTheme(toggleButton) {
         if (document.body.classList.contains('dark')) {
@@ -643,21 +959,6 @@
         document.body.classList.add('dark');
       }
 
-      document.querySelectorAll('#donations a[href]').forEach((anchorEl) => {
-        anchorEl.addEventListener('click', (e) => {
-          const tracker = ga.getAll()[0];
-          let label;
-          if (e.target.href) {
-            label = e.target.href;
-          } else {
-            label = e.target.parentElement.href;
-          }
-
-          if (tracker) {
-            tracker.send('event', 'Donation Link', 'Click', label);
-          }
-        });
-      });
     </script>
   </body>
 </html>

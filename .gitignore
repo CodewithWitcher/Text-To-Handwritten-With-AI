@@ -1,3 +1,10 @@
 node_modules/
 # Add .npmrc when you have multiple node binaries.
 .npmrc
+
+# macOS metadata (AppleDouble files created on external drives)
+._*
+.DS_Store
+
+# Python
+__pycache__/
