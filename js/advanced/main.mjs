@@ -63,6 +63,7 @@ import {
   answerUserPrompt,
   bulkCopyPrompt,
   singleCopyPrompt,
+  splitSubQuestions,
   parseBulkAnswers,
   composeDocument,
   targetWords
@@ -992,7 +993,8 @@ function initContent() {
     draft.source === 'paste' ? draft.pasteText : draft.pdfText;
 
   const applyExtraction = (res) => {
-    draft.questions = res.questions;
+    // (a), (b), (c)... become questions of their own, each with an answer.
+    draft.questions = splitSubQuestions(res.questions);
     draft.answers = {};
     // The paper's own title/subject/instructions win over older values.
     for (const key of ['title', 'subject', 'instructions']) {
@@ -1390,6 +1392,12 @@ function renderQuestions() {
     });
 
     const card = el('div.q-card', { dataset: { id: q.id } }, [
+      q.group &&
+        el('p.adv-hint.q-parent', {
+          text: `Part ${q.label} of Q${q.groupNumber}${
+            q.stem ? `: ${q.stem}` : ''
+          }`
+        }),
       el('div.q-head', {}, [
         num,
         marks,
@@ -1422,6 +1430,28 @@ function renderQuestions() {
           }
         }),
         copyFigBtn,
+        !q.group &&
+          splitSubQuestions([q]).length > 1 &&
+          el('button.adv-small', {
+            type: 'button',
+            text: 'Split into parts',
+            title: 'Make (a), (b), (c)... separate questions, each with its own answer',
+            onclick: () => {
+              if (
+                String(draft.answers[q.id] || '').trim() &&
+                !window.confirm(
+                  'Each part will get its own answer, so the current answer for this question will be removed. Continue?'
+                )
+              )
+                return;
+              const parts = splitSubQuestions([q]);
+              const at = draft.questions.indexOf(q);
+              draft.questions.splice(at, 1, ...parts);
+              delete draft.answers[q.id];
+              saveDraft();
+              renderQuestions();
+            }
+          }),
         el('button.adv-small', {
           type: 'button',
           text: '↑',

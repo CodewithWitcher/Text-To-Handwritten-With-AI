@@ -139,14 +139,18 @@ export function parseDocument(md) {
       const prev = blocks[blocks.length - 1];
       // "## Q1. ..." directly followed by "## (a) ...": sub-parts of the
       // same question, each on its own line, indented, no gap between.
+      // A sub-question after the previous part's answer ("(b) ...") is
+      // indented the same way, with the usual gap before it.
+      const joined = type === 'h2' && !gapBefore && prev && prev.type === 'h2';
       const subpart =
-        type === 'h2' && !gapBefore && prev && prev.type === 'h2';
+        joined ||
+        (type === 'h2' && /^\(?(?:[a-h]|[ivx]{1,4})[).]\s/i.test(m[2]));
       blocks.push({
         type,
         tokens: tokenize(m[2]),
         keepNext: true,
         subpart,
-        gap: subpart ? false : gapBefore || type !== 'h3'
+        gap: joined ? false : gapBefore || type !== 'h3'
       });
       gapBefore = false;
       continue;

@@ -712,3 +712,10 @@ body.dark .adv-step > summary .num {
 .q-col .q-add-img + .q-add-img {
   margin-top: 0;
 }
+.q-parent {
+  margin: 0 0 8px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -160,6 +160,21 @@ export function duplicateTemplate(id) {
 
 /* ------------------------------ Word targets ----------------------------- */
 
+/**
+ * The question as the AI should see it: a sub-question carries its parent's
+ * text ("Solve the following...") so it makes sense on its own.
+ */
+export function questionForPrompt(q) {
+  if (!q.group) return q.text;
+  return [
+    q.stem && `Main question ${q.groupNumber}: ${q.stem}`,
+    `Part ${q.label}: ${q.text}`,
+    `Answer only part ${q.label}.`
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function targetWords(question, template) {
   if (question.wordLimit) return Number(question.wordLimit);
   const marks = parseFloat(question.marks);
@@ -200,7 +215,7 @@ export function answerUserPrompt({ question, template, context, docInfo }) {
     `Question ${question.number || ''}${
       question.marks ? ` (${question.marks} marks)` : ''
     }:`,
-    question.text,
+    questionForPrompt(question),
     '',
     `Write the answer in about ${words} words.`
   ]
@@ -268,7 +283,7 @@ export function bulkCopyPrompt({ questions, template, context, docInfo }) {
       (q, i) =>
         `=== QUESTION ${i + 1} ===${
           q.marks ? ` (${q.marks} marks)` : ''
-        } [about ${targetWords(q, template)} words]\n${q.text}${
+        } [about ${targetWords(q, template)} words]\n${questionForPrompt(q)}${
           (q.figures || []).length
             ? '\n[This question has a figure that is not included in this prompt.]'
             : ''
@@ -387,6 +402,91 @@ export function questionLines(text) {
   return out.flatMap(splitInlineSubparts);
 }
 
+const MARKS_END_RE = /\s*[[(]\s*(\d+(?:\.\d+)?)\s*marks?\s*[\])]\s*$/i;
+const PART_RE = /^\(?((?:[a-h]|[ivx]{1,4}|¢))[).]\s*(.*)$/i;
+// "2(a)", "2 a", "Q2(b)", "2.b": a sub-question numbered on its own.
+const PART_NUMBER_RE = /^(?:Q\.?\s*)?(\d{1,2})\s*[.(]?\s*([a-h]|[ivx]{1,4})\)?$/i;
+
+const round1 = (x) => String(Math.round(x * 10) / 10);
+
+/**
+ * Turns a question with sub-parts ((a), (b)... or (i), (ii)...) into one
+ * question per part, so each part gets its own answer. Parts keep a link to
+ * the main question (group, stem) for the page layout and the AI prompt.
+ * Parts without their own marks share what's left of the question's marks.
+ */
+export function splitSubQuestions(questions) {
+  const out = [];
+  questions.forEach((q, qi) => {
+    if (q.group) return out.push(q);
+    const base = String(q.number || qi + 1)
+      .replace(/^Q\.?\s*/i, '')
+      .trim();
+    // The AI may already list parts separately ("2(a)", "2(b)").
+    const numbered = PART_NUMBER_RE.exec(base);
+    if (numbered) {
+      const label = `(${numbered[2].toLowerCase()})`;
+      return out.push({
+        ...q,
+        group: `n${numbered[1]}`,
+        groupNumber: numbered[1],
+        stem: '',
+        label
+      });
+    }
+    const lines = questionLines(q.text);
+    const firstIsPart = PART_RE.test(lines[0] || '');
+    const partLines = firstIsPart ? lines : lines.slice(1);
+    const parts = partLines.map((l) => PART_RE.exec(l));
+    if (parts.length < 2 || parts.some((p) => !p)) return out.push(q);
+
+    let stem = firstIsPart ? '' : lines[0];
+    const stemMarks = MARKS_END_RE.exec(stem);
+    if (stemMarks) stem = stem.slice(0, stemMarks.index).trim();
+    const subs = parts.map((p) => {
+      let text = p[2].trim();
+      let marks = '';
+      const m = MARKS_END_RE.exec(text);
+      if (m) {
+        marks = m[1];
+        text = text.slice(0, m.index).trim();
+      }
+      return { label: `(${p[1].replace('¢', 'c').toLowerCase()})`, text, marks };
+    });
+    const total = parseFloat(q.marks) || 0;
+    // "(c) ... (10 Marks)" where 10 is the whole question's total: not (c)'s.
+    const last = subs[subs.length - 1];
+    if (
+      last.marks &&
+      parseFloat(last.marks) === total &&
+      subs.slice(0, -1).every((x) => !x.marks)
+    )
+      last.marks = '';
+    const known = subs.reduce((n, s) => n + (parseFloat(s.marks) || 0), 0);
+    const missing = subs.filter((s) => !s.marks).length;
+    const share = missing && total > known ? round1((total - known) / missing) : '';
+    const words = parseFloat(q.wordLimit) || 0;
+    subs.forEach((s, i) =>
+      out.push({
+        id: `${q.id}-${i}`,
+        number: `${base}${s.label}`,
+        text: s.text,
+        marks: s.marks || share,
+        // Shared-out marks guide the answer length but aren't printed.
+        marksShared: !s.marks,
+        wordLimit: words ? round1(Math.round(words / subs.length)) : '',
+        figures: i === 0 ? q.figures : undefined,
+        group: q.id,
+        groupNumber: base,
+        groupMarks: q.marks || '',
+        stem,
+        label: s.label
+      })
+    );
+  });
+  return out;
+}
+
 export function composeDocument({
   template,
   questions,
@@ -404,6 +504,38 @@ export function composeDocument({
     lines.push('');
   }
   questions.forEach((q, i) => {
+    const sameGroupNext =
+      q.group && questions[i + 1] && questions[i + 1].group === q.group;
+    if (q.group) {
+      // Q1. <main question> once, then "(a) <part>", its answer, "(b)"...
+      if (!i || questions[i - 1].group !== q.group) {
+        let head = template.questionFormat
+          .replace('{n}', q.groupNumber)
+          .replace('{question}', q.stem || '')
+          .trim();
+        if (template.showMarks && q.groupMarks)
+          head += ` [${q.groupMarks} marks]`;
+        if (head) lines.push(`## ${head}`);
+      }
+      const partLines = questionLines(q.text);
+      if (!partLines.length) partLines.push('');
+      partLines[0] = `${q.label} ${partLines[0]}`.trim();
+      if (
+        template.showMarks &&
+        q.marks &&
+        !q.marksShared &&
+        q.marks !== q.groupMarks
+      )
+        partLines[partLines.length - 1] += ` [${q.marks} marks]`;
+      for (const l of partLines) lines.push(`## ${l}`);
+      for (const id of q.figures || []) lines.push(`[image: ${id}]`);
+      if (template.answerLabel) lines.push(`**${template.answerLabel}**`);
+      lines.push(normalizeAnswer(answers[q.id]) || '(answer pending)');
+      lines.push('');
+      if (options.pageBreakBetween && i < questions.length - 1 && !sameGroupNext)
+        lines.push('---');
+      return;
+    }
     const n = q.number
       ? String(q.number).replace(/^Q\.?\s*/i, '')
       : String(i + 1);
