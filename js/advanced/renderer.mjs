@@ -475,11 +475,21 @@ export function paginate(
   const queue = blocks.map((b, i) => ({ id: i, ...b }));
 
   const newPage = () => {
-    // Keep headings / "Ans." labels with the text that follows them.
+    // Keep headings / "Ans." labels with the text that follows them, but
+    // only short ones: moving a tall block (a whole passage question) or a
+    // long chain of them would leave this page nearly empty, and the next
+    // page could do the same again (title alone on page 1, subject alone on
+    // page 2...).
     const kids = Array.from(page.content.children);
     const moved = [];
+    const limit = page.g.contentH * 0.25;
+    let movedH = 0;
     while (kids.length > 1 && kids[kids.length - 1]._block.keepNext) {
-      const node = kids.pop();
+      const node = kids[kids.length - 1];
+      const h = node.offsetHeight + (parseFloat(node.style.marginTop) || 0);
+      if (movedH + h > limit) break;
+      movedH += h;
+      kids.pop();
       moved.unshift(node._block);
       node.remove();
     }
