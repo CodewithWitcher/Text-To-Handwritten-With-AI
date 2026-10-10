@@ -177,7 +177,8 @@ export function targetWords(question, template) {
 const FORMAT_RULES = `Formatting rules (the text will be converted to handwriting on ruled paper):
 - Use only this markup: "### " for sub-headings, "- " for bullets, "1. " for numbered steps, **text** for a few key terms, blank lines between paragraphs.
 - Do NOT use "#" or "##" headings, tables, code blocks, LaTeX, emojis or images. Write formulas in plain text (e.g. "v = u + at", "x^2").
-- If a diagram or table would normally be drawn, describe it briefly in words instead.
+- If a diagram, flowchart or figure is really needed, put it on a line of its own as [diagram: short caption], e.g. "[diagram: Recursion tree for T(n) = 2T(n/2) + n]". Blank space is left there for the student to draw it by hand. Also explain what it shows in the text. At most two per answer.
+- Tables: write them as short bullet lists instead.
 - Do not repeat the question. Do not add a preamble like "Here is the answer" or any closing remarks.`;
 
 export function answerSystemPrompt(template) {
@@ -252,7 +253,9 @@ Return JSON with keys: title, subject, courseCode, assignmentNo, programmeCode, 
 - programmeCode: the programme/degree code (e.g. "BCA"), else "".
 - instructions: general instructions for students (word limits, "attempt any five", formatting), else "".
 - questions: in order. For each: number (as printed, e.g. "1", "2(a)", "Q3"), text (the full question verbatim including its sub-parts, OR-choices and any data it gives; keep sub-parts on separate lines), marks (e.g. "10" or ""), wordLimit (e.g. "500" or "").
-Do not answer the questions. Do not invent questions. Merge a question that continues across a page break into one item.`;
+Do not answer the questions. Do not invent questions. Merge a question that continues across a page break into one item.
+Formulas: write them in plain linear text, e.g. "T(n) = 16T(n/4) + n^2", "x_1", "sqrt(b^2 - 4ac)". Text taken from PDFs often garbles equations into stray symbols (e.g. "16T * ! \" + + n #" for "16T(n/4) + n^2"): read the formula from the page if you can see it; otherwise reconstruct it only when the pattern makes it certain, and if not, keep the text and add " [check formula in paper]".
+Figures: if a question shows a diagram, graph, table or figure, keep the question text and add a short description in square brackets, e.g. "[Figure: binary tree with root 50, left child 30, right child 70]".`;
 
 /**
  * Prompt the user can paste into ChatGPT / Claude.ai / DeepSeek chat when they
@@ -265,7 +268,11 @@ export function bulkCopyPrompt({ questions, template, context, docInfo }) {
       (q, i) =>
         `=== QUESTION ${i + 1} ===${
           q.marks ? ` (${q.marks} marks)` : ''
-        } [about ${targetWords(q, template)} words]\n${q.text}`
+        } [about ${targetWords(q, template)} words]\n${q.text}${
+          (q.figures || []).length
+            ? '\n[This question has a figure that is not included in this prompt.]'
+            : ''
+        }`
     )
     .join('\n\n');
   return `${answerSystemPrompt(template)}
@@ -282,6 +289,24 @@ ${[
 Answer each question below. Start every answer with a marker line exactly like "=== ANSWER 1 ===" (matching the question number), then the answer. Output nothing else.
 
 ${blocks}`;
+}
+
+/** Prompt for one question, for pasting into a chatbot. */
+export function singleCopyPrompt({ question, template, context, docInfo }) {
+  const figures = (question.figures || []).length;
+  return `${answerSystemPrompt(template)}
+
+${answerUserPrompt({ question, template, context, docInfo })}${
+    figures
+      ? `\n\nThe figure${
+          figures > 1 ? 's' : ''
+        } from the question paper ${
+          figures > 1 ? 'are' : 'is'
+        } attached as an image. Use it to answer.`
+      : ''
+  }
+
+Reply with only the answer text, nothing before or after it.`;
 }
 
 export function parseBulkAnswers(text, count) {
@@ -310,6 +335,58 @@ function normalizeAnswer(md) {
     .trim();
 }
 
+// A sub-part at the start of a line: (a) a) a. (iv) iv) and OCR's "¢" for c.
+const SUBPART_START_RE = /^\(?(?:[a-h]|[ivx]{1,4}|¢)[).]\s/i;
+// The same inside a line; only the "(a)" / "a)" forms, "a." is too common.
+const SUBPART_INLINE_RE = /(^|\s)\(?([a-h]|[ivx]{1,4})\)\s/gi;
+
+const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+function subpartIndex(label) {
+  const l = label.toLowerCase();
+  const r = ROMAN.indexOf(l);
+  // "i" could be a letter or a roman one; the sequence decides below.
+  return { letter: l.length === 1 ? l.charCodeAt(0) - 97 : -1, roman: r };
+}
+
+/** "... (a) xx (b) yy" on one line -> one line per sub-part. */
+function splitInlineSubparts(line) {
+  const marks = [...line.matchAll(SUBPART_INLINE_RE)].map((m) => ({
+    at: m.index + m[1].length,
+    ...subpartIndex(m[2])
+  }));
+  // Keep only markers that count up from (a) or (i): (a)(b)(c) / (i)(ii).
+  for (const kind of ['letter', 'roman']) {
+    const seq = [];
+    for (const m of marks) if (m[kind] === seq.length) seq.push(m);
+    if (seq.length >= 2) {
+      const parts = [];
+      let from = 0;
+      for (const m of seq) {
+        if (m.at > from) parts.push(line.slice(from, m.at).trim());
+        from = m.at;
+      }
+      parts.push(line.slice(from).trim());
+      return parts.filter(Boolean);
+    }
+  }
+  return [line];
+}
+
+/**
+ * A question as lines: the question itself, then one line per sub-part
+ * ((a), (b), (i)...). Other line breaks (PDF wrapping) are joined back.
+ */
+export function questionLines(text) {
+  const out = [];
+  for (const raw of String(text || '').replace(/\r\n/g, '\n').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (!out.length || SUBPART_START_RE.test(line)) out.push(line);
+    else out[out.length - 1] += ` ${line}`;
+  }
+  return out.flatMap(splitInlineSubparts);
+}
+
 export function composeDocument({
   template,
   questions,
@@ -330,20 +407,27 @@ export function composeDocument({
     const n = q.number
       ? String(q.number).replace(/^Q\.?\s*/i, '')
       : String(i + 1);
-    let qText = String(q.text || '')
-      .trim()
-      .replace(/\n+/g, ' ');
+    const qLines = questionLines(q.text);
+    if (!qLines.length) qLines.push('');
     // "(10 marks)" at the end of the question is shown once, as [10 marks].
+    // A sub-part's own marks ("(b) ... (3 Marks)") stay where they are.
     if (template.showMarks && q.marks) {
-      qText = qText
-        .replace(/\s*[[(]\s*\d+(?:\.\d+)?\s*marks?\s*[\])]\s*$/i, '')
-        .trim();
+      const last = qLines.length - 1;
+      const m = /\s*[[(]\s*(\d+(?:\.\d+)?)\s*marks?\s*[\])]\s*$/i.exec(
+        qLines[last]
+      );
+      if (m && (qLines.length === 1 || Number(m[1]) === Number(q.marks)))
+        qLines[last] = qLines[last].slice(0, m.index).trim();
     }
-    let heading = template.questionFormat
+    qLines[0] = template.questionFormat
       .replace('{n}', n)
-      .replace('{question}', qText);
-    if (template.showMarks && q.marks) heading += ` [${q.marks} marks]`;
-    lines.push(`## ${heading}`);
+      .replace('{question}', qLines[0]);
+    if (template.showMarks && q.marks)
+      qLines[qLines.length - 1] += ` [${q.marks} marks]`;
+    // Each sub-part on its own line (consecutive "##" lines stay together).
+    for (const l of qLines) lines.push(`## ${l}`);
+    // Figures from the question paper, right under the question.
+    for (const id of q.figures || []) lines.push(`[image: ${id}]`);
     if (template.answerLabel) lines.push(`**${template.answerLabel}**`);
     lines.push(normalizeAnswer(answers[q.id]) || '(answer pending)');
     lines.push('');

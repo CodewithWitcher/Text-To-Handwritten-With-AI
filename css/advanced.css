@@ -669,3 +669,46 @@ body.dark .adv-step > summary .num {
     grid-column: auto;
   }
 }
+.q-warn {
+  color: var(--adv-err);
+  margin: 6px 0 0;
+}
+.q-figs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.q-figs:empty {
+  display: none;
+}
+.q-fig {
+  position: relative;
+  border: 1px solid var(--field-borders);
+  border-radius: 4px;
+  background: #fff;
+  padding: 4px;
+}
+.q-fig img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+}
+.q-fig button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+.q-add-img {
+  align-self: flex-start;
+}
+.q-fig-caution {
+  margin: 0;
+  color: var(--font-color-primary);
+  background: color-mix(in srgb, #f9ab00 18%, transparent);
+  border-left: 3px solid #f9ab00;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+.q-col .q-add-img + .q-add-img {
+  margin-top: 0;
+}

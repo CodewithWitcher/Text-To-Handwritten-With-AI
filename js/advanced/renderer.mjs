@@ -107,6 +107,26 @@ export function parseDocument(md) {
       gapBefore = true;
       continue;
     }
+    // "[diagram: caption]" or "[diagram: caption | 12]": blank ruled space
+    // (default 10 lines) to draw the figure by hand, with the caption below.
+    if ((m = /^\[(?:diagram|figure|fig)\s*:?\s*([^|\]]*?)\s*(?:\|\s*(\d{1,2})\s*)?\]$/i.exec(line))) {
+      flushPara();
+      blocks.push({
+        type: 'diagram',
+        lines: Math.min(25, Math.max(4, Number(m[2]) || 10)),
+        tokens: tokenize(`Fig: ${m[1] || 'Diagram'}`),
+        gap: true
+      });
+      gapBefore = false;
+      continue;
+    }
+    // "[image: id]": a figure (see images.mjs), drawn on the page as is.
+    if ((m = /^\[image:\s*([a-z0-9]+)\s*\]$/i.exec(line))) {
+      flushPara();
+      blocks.push({ type: 'image', id: m[1], tokens: [], gap: true });
+      gapBefore = false;
+      continue;
+    }
     if (/^(-{3,}|\[pagebreak\])$/i.test(line)) {
       flushPara();
       blocks.push({ type: 'break' });
@@ -116,11 +136,17 @@ export function parseDocument(md) {
     if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) {
       flushPara();
       const type = ['', 'h1', 'h2', 'h3'][m[1].length];
+      const prev = blocks[blocks.length - 1];
+      // "## Q1. ..." directly followed by "## (a) ...": sub-parts of the
+      // same question, each on its own line, indented, no gap between.
+      const subpart =
+        type === 'h2' && !gapBefore && prev && prev.type === 'h2';
       blocks.push({
         type,
         tokens: tokenize(m[2]),
         keepNext: true,
-        gap: gapBefore || type !== 'h3'
+        subpart,
+        gap: subpart ? false : gapBefore || type !== 'h3'
       });
       gapBefore = false;
       continue;
@@ -151,7 +177,8 @@ export function parseDocument(md) {
   }
   flushPara();
   return blocks.filter(
-    (b) => b.type === 'break' || (b.tokens && b.tokens.length)
+    (b) =>
+      b.type === 'break' || b.type === 'image' || (b.tokens && b.tokens.length)
   );
 }
 
@@ -242,6 +269,30 @@ function fits(page) {
   return last.offsetTop + last.offsetHeight <= page.g.contentH + 2;
 }
 
+// "n^2", "2^(n+1)", "x^{10}": the power, written raised and smaller.
+const POWER_RE = /\^(\{[^}]*\}|\([^)]*\)|[A-Za-z0-9.+\-]+)/g;
+
+/** Writes a word, drawing "^power" as a superscript (fonts often lack "^"). */
+function writeToken(span, text) {
+  if (!text.includes('^') || text === '^') {
+    span.textContent = text;
+    return;
+  }
+  let last = 0;
+  for (const m of text.matchAll(POWER_RE)) {
+    if (m.index > last) span.append(text.slice(last, m.index));
+    const sup = document.createElement('span');
+    sup.textContent = m[1].replace(/^\{(.*)\}$/, '$1');
+    // Raised with position (not vertical-align) so the line height and the
+    // ruled lines stay put.
+    sup.style.cssText =
+      'font-size:0.68em;position:relative;top:-0.55em;margin-left:0.05em;';
+    span.append(sup);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) span.append(text.slice(last));
+}
+
 function renderBlock(block, page, style, { atTop, continued }) {
   const L = style.lineHeight;
   const node = document.createElement('div');
@@ -271,6 +322,7 @@ function renderBlock(block, page, style, { atTop, continued }) {
     if (block.type === 'h1' && style.titleCentered)
       node.style.textAlign = 'center';
   }
+  if (block.subpart) node.style.paddingLeft = '1.4em';
   if (block.type === 'li') {
     node.style.paddingLeft = '1.7em';
     if (!continued) {
@@ -281,13 +333,38 @@ function renderBlock(block, page, style, { atTop, continued }) {
     }
   }
 
+  if (block.type === 'image' && block.img) {
+    // Fit the content width and at most half a page, then round the height
+    // up to whole ruled lines so the text below stays on the lines.
+    const { w, h: ih, src } = block.img;
+    const maxW = PAGE_W - page.g.left - page.g.right - 16;
+    const s = Math.min(1, maxW / w, (page.g.contentH * 0.5) / ih);
+    const lines = Math.max(2, Math.ceil((ih * s + 6) / L));
+    const box = document.createElement('div');
+    box.style.cssText = `height:${
+      lines * L
+    }px;display:flex;align-items:center;justify-content:center;`;
+    const im = document.createElement('img');
+    im.src = src;
+    im.alt = '';
+    im.style.cssText = `width:${w * s}px;height:${ih * s}px;display:block;`;
+    box.append(im);
+    node.append(box);
+  }
+  if (block.type === 'diagram') {
+    const space = document.createElement('div');
+    space.style.height = `${block.lines * L}px`;
+    node.append(space);
+    node.style.textAlign = 'center';
+  }
+
   const underlineAll =
     isHeading && style.headingUnderline && block.type !== 'h3';
   const h = Math.max(0, Math.min(3, Number(style.humanize) || 0));
   const offset = block.offset || 0;
   block.tokens.forEach((tok, i) => {
     const span = document.createElement('span');
-    span.textContent = tok.t;
+    writeToken(span, tok.t);
     if (tok.em || underlineAll) {
       // A bottom border renders consistently in html2canvas (text-decoration
       // is drawn at the wrong height for many handwriting fonts).
@@ -414,6 +491,7 @@ export function paginate(
 
     // Find how many words fit on this page (binary search).
     const canSplit =
+      block.type !== 'diagram' &&
       block.tokens.length > 1 &&
       (!block.keepNext || atTop || block.type === 'p' || tallHeading);
     let best = 0;

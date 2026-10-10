@@ -50,11 +50,18 @@ export async function extractPdfText(
   const pdf = await openPdf(file);
   const pages = [];
   const scanned = [];
+  const mathPages = [];
   for (let n = 1; n <= pdf.numPages; n++) {
     onProgress(`Reading page ${n} of ${pdf.numPages}…`);
     const page = await pdf.getPage(n);
     const content = await page.getTextContent();
-    const text = itemsToText(content.items).trim();
+    const raw = itemsToText(content.items).trim();
+    // Equations (Word/Cambria Math) use maths letters like "𝑇(𝑛)", and their
+    // fractions and powers come out as junk ("* ! \" +"). Remember the page
+    // so the AI can read those formulas from its image instead.
+    if (MATH_CHARS.test(raw)) mathPages.push(n);
+    // NFKC turns "𝑇(𝑛)" into plain "T(n)" and ligatures like "ﬁ" into "fi".
+    const text = raw.normalize('NFKC');
     pages.push(text);
     if (text.replace(/\s/g, '').length < 20) scanned.push(n);
   }
@@ -79,11 +86,26 @@ export async function extractPdfText(
     text: pages.join('\n\n'),
     pages,
     numPages: pdf.numPages,
-    scannedPages: scanned
+    scannedPages: scanned,
+    mathPages
   };
 }
 
-async function renderPageToDataUrl(pdf, n, scale = 2) {
+// Mathematical Alphanumeric Symbols block (𝑇, 𝑛, 𝐴, ...).
+const MATH_CHARS = /[\u{1D400}-\u{1D7FF}]/u;
+
+/** Pages of a PDF as JPEG data URLs, e.g. to show formulas to the AI. */
+export async function pdfPageImages(file, pageNumbers, scale = 1.6) {
+  const pdf = await openPdf(file);
+  const out = [];
+  for (const n of pageNumbers) {
+    if (n >= 1 && n <= pdf.numPages)
+      out.push(await renderPageToDataUrl(pdf, n, scale, 'image/jpeg'));
+  }
+  return out;
+}
+
+async function renderPageToDataUrl(pdf, n, scale = 2, type = 'image/png') {
   const page = await pdf.getPage(n);
   const viewport = page.getViewport({ scale });
   const canvas = document.createElement('canvas');
@@ -93,7 +115,7 @@ async function renderPageToDataUrl(pdf, n, scale = 2) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL(type, 0.85);
 }
 
 /** First page of a PDF as a PNG data URL (for front pages). */

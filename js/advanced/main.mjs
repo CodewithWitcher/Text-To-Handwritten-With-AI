@@ -62,12 +62,24 @@ import {
   answerSystemPrompt,
   answerUserPrompt,
   bulkCopyPrompt,
+  singleCopyPrompt,
   parseBulkAnswers,
   composeDocument,
   targetWords
 } from './templates.mjs';
-import { extractBasic, extractWithAI } from './questions.mjs';
-import { extractPdfText, fileToBase64 } from './pdf-input.mjs';
+import { extractBasic, extractWithAI, garbledMath } from './questions.mjs';
+import {
+  addImage,
+  copyImagesToClipboard,
+  deleteImage,
+  downloadImages,
+  getImage,
+  imageFromClipboard,
+  imageIdsIn,
+  imageMarker,
+  resolveImageBlocks
+} from './images.mjs';
+import { extractPdfText, fileToBase64, pdfPageImages } from './pdf-input.mjs';
 import {
   DEFAULT_STYLE,
   parseDocument,
@@ -916,9 +928,11 @@ function initContent() {
    * from the old paper). The profile, courses and front page layout stay.
    */
   const startNewAssignment = () => {
+    for (const q of draft.questions) deleteQuestionImages(q);
     draft.questions = [];
     draft.answers = {};
     draft.docText = '';
+    draft.mathPages = [];
     if ($('#doc-text')) $('#doc-text').value = '';
     draft.docInfo = { title: '', subject: '', instructions: '' };
     for (const key of ['title', 'subject', 'instructions'])
@@ -946,6 +960,7 @@ function initContent() {
           onProgress: (m) => (info.textContent = m)
         });
         draft.pdfText = res.text.slice(0, 500000);
+        draft.mathPages = res.mathPages;
         info.textContent = `${file.name}: ${res.numPages} page(s)${
           res.scannedPages.length
             ? `, ${res.scannedPages.length} read with OCR`
@@ -1028,8 +1043,24 @@ function initContent() {
     try {
       if (canUsePdf && !pdfSource.base64)
         pdfSource.base64 = await fileToBase64(pdfSource.file);
+      // Providers that only get the text can still see the pages with
+      // formulas as images, if they accept images.
+      let pageImages = [];
+      if (
+        !canUsePdf &&
+        provider.vision &&
+        draft.source === 'pdf' &&
+        pdfSource.file &&
+        (draft.mathPages || []).length
+      ) {
+        status.textContent = 'Preparing the pages with formulas…';
+        pageImages = await pdfPageImages(
+          pdfSource.file,
+          draft.mathPages.slice(0, 8)
+        );
+      }
       const res = await extractWithAI(
-        { text, pdfBase64: canUsePdf ? pdfSource.base64 : null },
+        { text, pdfBase64: canUsePdf ? pdfSource.base64 : null, pageImages },
         provider,
         { onProgress: (m) => (status.textContent = m) }
       );
@@ -1075,9 +1106,20 @@ function initContent() {
       context: academicContext(),
       docInfo: draft.docInfo
     });
-    (await copyText(prompt))
-      ? toast('Prompt copied. Paste it into your chatbot.', 'success')
-      : toast('Copy failed.', 'error');
+    const withFigures = draft.questions.filter((q) => (q.figures || []).length);
+    if (!(await copyText(prompt))) return toast('Copy failed.', 'error');
+    toast(
+      withFigures.length
+        ? `Prompt copied. ${withFigures
+            .map((q) => `Q${q.number}`)
+            .join(', ')} ha${
+            withFigures.length > 1 ? 've' : 's'
+          } a figure that isn't in this prompt: use "Copy prompt" on ${
+            withFigures.length > 1 ? 'those questions' : 'that question'
+          } instead.`
+        : 'Prompt copied. Paste it into your chatbot.',
+      withFigures.length ? 'info' : 'success'
+    );
   });
 
   $('#import-answers').addEventListener('click', () => {
@@ -1161,6 +1203,15 @@ function watchQuestionSizes() {
   });
 }
 
+/** Removes a question's figures and the images inside its answer. */
+function deleteQuestionImages(q) {
+  for (const id of [
+    ...(q.figures || []),
+    ...imageIdsIn(draft.answers[q.id])
+  ])
+    deleteImage(id);
+}
+
 function renderQuestions() {
   const list = $('#questions-list');
   if (!list) return;
@@ -1200,6 +1251,119 @@ function renderQuestions() {
     });
     answer.value = draft.answers[q.id] || '';
     const status = el('span.adv-status.q-status');
+    const formulaWarn = el('p.adv-hint.q-warn');
+    const updateWarn = (value) => {
+      const bad = garbledMath(value);
+      formulaWarn.hidden = !bad;
+      formulaWarn.textContent = bad
+        ? `⚠ "${bad}" looks like a formula the PDF stored as symbols. Compare it with the question paper and fix it here, e.g. T(n) = 16T(n/4) + n^2.`
+        : '';
+    };
+    updateWarn(q.text);
+
+    // Figures (e.g. the graph in "Consider the following graph"): paste a
+    // screenshot into the question, or upload. Drawn under the question.
+    const figs = el('div.q-figs');
+    // Shown only when the question has a figure: the chatbot needs it too.
+    const figCaution = el('p.adv-hint.q-fig-caution', {
+      text:
+        '⚠ This question has a figure. For a chatbot: click "Copy prompt" and paste it, then click "Copy figure" and paste it into the same message (the chatbot must accept images, e.g. ChatGPT, Claude.ai, Gemini). Then send.'
+    });
+    const copyFigBtn = el('button.adv-small', {
+      type: 'button',
+      text: 'Copy figure',
+      title: 'Copy the figure to paste into a chatbot',
+      onclick: async () => {
+        if (await copyImagesToClipboard(q.figures || [])) {
+          toast('Figure copied. Paste it into the same chat message.', 'success');
+        } else {
+          toast(
+            'This browser blocked copying images. The figure was downloaded instead: attach it in the chat.',
+            'info'
+          );
+          downloadImages(q.figures || [], `Q${q.number || idx + 1}-figure`);
+        }
+      }
+    });
+    const updateFigUI = () => {
+      const has = (q.figures || []).length > 0;
+      figCaution.hidden = !has;
+      copyFigBtn.hidden = !has;
+    };
+    updateFigUI();
+    const renderFigs = async () => {
+      updateFigUI();
+      figs.textContent = '';
+      for (const id of q.figures || []) {
+        const img = await getImage(id);
+        if (!img) continue;
+        figs.append(
+          el('div.q-fig', {}, [
+            el('img', { src: img.src, alt: 'Figure for this question' }),
+            el('button.adv-icon-btn', {
+              type: 'button',
+              text: '×',
+              title: 'Remove figure',
+              'aria-label': 'Remove figure',
+              onclick: async () => {
+                q.figures = q.figures.filter((x) => x !== id);
+                await deleteImage(id);
+                saveDraft();
+                renderFigs();
+              }
+            })
+          ])
+        );
+      }
+    };
+    const addFigure = async (file) => {
+      try {
+        const id = await addImage(file);
+        q.figures = [...(q.figures || []), id];
+        saveDraft();
+        renderFigs();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    };
+    renderFigs();
+    const pickImage = (onFile) => {
+      const input = el('input', { type: 'file', accept: 'image/*' });
+      input.addEventListener('change', () => {
+        if (input.files[0]) onFile(input.files[0]);
+      });
+      input.click();
+    };
+    text.addEventListener('paste', (e) => {
+      const file = imageFromClipboard(e);
+      if (!file) return;
+      e.preventDefault();
+      addFigure(file);
+    });
+
+    // Images inside the answer go exactly where the cursor is.
+    const insertInAnswer = async (file) => {
+      try {
+        const id = await addImage(file);
+        const at = answer.selectionStart ?? answer.value.length;
+        const before = answer.value.slice(0, at).replace(/[ \t]*$/, '');
+        const after = answer.value.slice(at).replace(/^[ \t]*/, '');
+        answer.value = `${before}${before ? '\n\n' : ''}${imageMarker(id)}${
+          after ? '\n\n' : ''
+        }${after}`;
+        draft.answers[q.id] = answer.value;
+        saveDraft();
+        autoGrow(answer);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    };
+    answer.addEventListener('paste', (e) => {
+      const file = imageFromClipboard(e);
+      if (!file) return;
+      e.preventDefault();
+      insertInAnswer(file);
+    });
     const target = el('small.adv-hint');
     const updateTarget = () =>
       (target.textContent = `≈ ${targetWords(q, template)} words`);
@@ -1215,7 +1379,10 @@ function renderQuestions() {
     bindQ(marks, 'marks');
     bindQ(words, 'wordLimit');
     bindQ(text, 'text');
-    text.addEventListener('input', () => autoGrow(text));
+    text.addEventListener('input', () => {
+      autoGrow(text);
+      updateWarn(text.value);
+    });
     answer.addEventListener('input', () => {
       draft.answers[q.id] = answer.value;
       saveDraft();
@@ -1234,6 +1401,27 @@ function renderQuestions() {
           text: answer.value ? 'Regenerate' : 'Generate',
           onclick: () => generateAnswers(false, [q])
         }),
+        el('button.adv-small', {
+          type: 'button',
+          text: 'Copy prompt',
+          title: 'No API key? Copy this question as a prompt for any chatbot',
+          onclick: async () => {
+            const prompt = singleCopyPrompt({
+              question: q,
+              template: getTemplate(draft.templateId),
+              context: academicContext(),
+              docInfo: draft.docInfo
+            });
+            if (!(await copyText(prompt))) return toast('Copy failed.', 'error');
+            toast(
+              (q.figures || []).length
+                ? 'Prompt copied. Paste it in the chat, then click "Copy figure" and paste that too.'
+                : 'Prompt copied. Paste it into your chatbot, then paste its reply with "Paste answer".',
+              'success'
+            );
+          }
+        }),
+        copyFigBtn,
         el('button.adv-small', {
           type: 'button',
           text: '↑',
@@ -1256,6 +1444,7 @@ function renderQuestions() {
           'aria-label': 'Delete question',
           onclick: () => {
             draft.questions.splice(idx, 1);
+            deleteQuestionImages(q);
             delete draft.answers[q.id];
             saveDraft();
             renderQuestions();
@@ -1264,9 +1453,61 @@ function renderQuestions() {
       ]),
       // Side by side on wide screens, stacked on narrow ones.
       el('div.q-body', {}, [
-        el('div.q-col', {}, [el('span.q-label', { text: 'Question' }), text]),
-        el('div.q-col', {}, [el('span.q-label', { text: 'Answer' }), answer])
+        el('div.q-col', {}, [
+          el('span.q-label', { text: 'Question' }),
+          text,
+          figs,
+          figCaution,
+          el('button.adv-small.q-add-img', {
+            type: 'button',
+            text: '+ Add figure',
+            title: 'Upload an image, or paste a screenshot into the question box',
+            onclick: () => pickImage(addFigure)
+          })
+        ]),
+        el('div.q-col', {}, [
+          el('span.q-label', { text: 'Answer' }),
+          answer,
+          el('button.adv-small.q-add-img', {
+            type: 'button',
+            text: 'Paste answer',
+            title: "Paste the chatbot's reply as this question's answer",
+            onclick: async () => {
+              let reply = '';
+              try {
+                reply = await navigator.clipboard.readText();
+              } catch (e) {
+                answer.focus();
+                return toast(
+                  'Click in the answer box and press Ctrl+V / ⌘V to paste.',
+                  'info'
+                );
+              }
+              // Drop a stray "=== ANSWER 1 ===" marker if the bot added one.
+              reply = reply.replace(/^\s*=+\s*ANSWER\s+\d+\s*=+\s*$/gim, '').trim();
+              if (!reply) return toast('The clipboard is empty.', 'error');
+              if (
+                answer.value.trim() &&
+                !window.confirm('Replace the current answer with the pasted one?')
+              )
+                return;
+              answer.value = reply;
+              draft.answers[q.id] = reply;
+              saveDraft();
+              autoGrow(answer);
+              toast('Answer pasted.', 'success');
+            }
+          }),
+          el('button.adv-small.q-add-img', {
+            type: 'button',
+            text: '+ Image at cursor',
+            title:
+              'Insert an image where the cursor is in the answer (you can also paste one)',
+            onclick: () => pickImage(insertInAnswer)
+          })
+        ])
       ]),
+      formulaWarn,
       status
     ]);
     list.append(card);
@@ -1317,15 +1558,25 @@ async function generateAnswers(onlyMissing, subset) {
       let attempt = 0;
       for (;;) {
         try {
+          const figures = [];
+          for (const id of q.figures || []) {
+            const img = await getImage(id);
+            if (img) figures.push(img.src);
+          }
           const { text, truncated } = await complete(
             {
               system: answerSystemPrompt(template),
-              prompt: answerUserPrompt({
-                question: q,
-                template,
-                context,
-                docInfo: draft.docInfo
-              }),
+              prompt:
+                answerUserPrompt({
+                  question: q,
+                  template,
+                  context,
+                  docInfo: draft.docInfo
+                }) +
+                (figures.length && provider.vision
+                  ? '\n\nThe figure(s) from the question paper are attached. Use them to answer.'
+                  : ''),
+              images: provider.vision ? figures : [],
               maxTokens: 16000,
               effort: 'medium',
               signal
@@ -1342,6 +1593,8 @@ async function generateAnswers(onlyMissing, subset) {
           if (qStatus)
             qStatus.textContent = truncated
               ? '⚠ Answer was cut off by the model’s length limit. Regenerate or edit.'
+              : figures.length && !provider.vision
+              ? '✓ Done. This AI model can’t see images, so it answered without the figure: check the answer.'
               : '✓ Done';
           done++;
           break;
@@ -1431,7 +1684,7 @@ function initBuild() {
       docText.value = text;
       saveDraft();
     }
-    const blocks = parseDocument(text);
+    const blocks = await resolveImageBlocks(parseDocument(text));
     if (!blocks.some((b) => b.type !== 'break')) {
       return toast(
         draft.source === 'own'

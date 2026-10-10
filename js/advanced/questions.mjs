@@ -40,6 +40,24 @@ function computeMarks(text, headText = String(text).split('\n')[0]) {
   return String(Math.round(total * 100) / 100);
 }
 
+// Leftovers of an equation the PDF didn't store as text: runs of the
+// placeholder characters Cambria Math uses for fractions and powers,
+// e.g. "16T * ! \" + + n #" for "16T(n/4) + n^2".
+// Needs 4+ lone symbols in a row so normal text ("C++ / C#", "3 * 4",
+// "Q1: (3*4= 12 Marks)") never matches.
+const GARBLED_MATH_RE = /(?:^|\s)[!"#$*+](?:\s+[!"#$*+]){3,}(?=\s|$)/;
+
+/** The garbled fragment (with a little context), or '' if none. */
+export function garbledMath(text) {
+  const t = String(text || '');
+  const m = GARBLED_MATH_RE.exec(t);
+  if (!m) return '';
+  const from = Math.max(0, t.lastIndexOf(' ', Math.max(0, m.index - 12)));
+  return t.slice(from, m.index + m[0].length + 6).trim();
+}
+
+export const hasGarbledMath = (text) => !!garbledMath(text);
+
 function normalizeQuestion(q, i) {
   const text = String(q.text || '').trim();
   const marks =
@@ -231,6 +249,7 @@ export async function extractWithAI(
   } else {
     const text = String(source.text || '').trim();
     if (!text) throw new AIError('No text found in the document to analyse.');
+    const pageImages = provider.vision ? source.pageImages || [] : [];
     const chunks = chunkText(text);
     for (let i = 0; i < chunks.length; i++) {
       onProgress(
@@ -247,7 +266,12 @@ export async function extractWithAI(
                 ? `This is part ${i + 1} of ${
                     chunks.length
                   } of the paper. Extract the questions that appear in this part only.\n\n`
-                : '') + `Assessment text:\n"""\n${chunks[i]}\n"""`,
+                : '') +
+              (pageImages.length
+                ? 'The attached images are the pages that contain formulas or figures. The text below garbles formulas, so copy every formula and describe every figure from the images.\n\n'
+                : '') +
+              `Assessment text:\n"""\n${chunks[i]}\n"""`,
+            images: pageImages,
             jsonSchema: QUESTIONS_SCHEMA,
             effort: 'low',
             signal
