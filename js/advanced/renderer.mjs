@@ -121,9 +121,14 @@ export function parseDocument(md) {
       continue;
     }
     // "[image: id]": a figure (see images.mjs), drawn on the page as is.
-    if ((m = /^\[image:\s*([a-z0-9]+)\s*\]$/i.exec(line))) {
+    if ((m = /^\[image:\s*([a-z0-9]+)\s*(?:\|\s*([^\]]*?)\s*)?\]$/i.exec(line))) {
       flushPara();
-      blocks.push({ type: 'image', id: m[1], tokens: [], gap: true });
+      blocks.push({
+        type: 'image',
+        id: m[1],
+        tokens: m[2] ? tokenize(m[2]) : [],
+        gap: true
+      });
       gapBefore = false;
       continue;
     }
@@ -351,9 +356,12 @@ function renderBlock(block, page, style, { atTop, continued }) {
     const im = document.createElement('img');
     im.src = src;
     im.alt = '';
-    im.style.cssText = `width:${w * s}px;height:${ih * s}px;display:block;`;
+    // A slight, stable tilt per image, like the handwriting around it.
+    const tilt = ((hashRandom(block.id) - 0.5) * 1.2).toFixed(2);
+    im.style.cssText = `width:${w * s}px;height:${ih * s}px;display:block;transform:rotate(${tilt}deg);`;
     box.append(im);
     node.append(box);
+    node.style.textAlign = 'center'; // caption, if any, under the image
   }
   if (block.type === 'diagram') {
     const space = document.createElement('div');
@@ -496,6 +504,7 @@ export function paginate(
     // Find how many words fit on this page (binary search).
     const canSplit =
       block.type !== 'diagram' &&
+      block.type !== 'image' &&
       block.tokens.length > 1 &&
       (!block.keepNext || atTop || block.type === 'p' || tallHeading);
     let best = 0;

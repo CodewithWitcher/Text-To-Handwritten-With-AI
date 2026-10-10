@@ -164,15 +164,77 @@ export function duplicateTemplate(id) {
  * The question as the AI should see it: a sub-question carries its parent's
  * text ("Solve the following...") so it makes sense on its own.
  */
-export function questionForPrompt(q) {
+export function questionForPrompt(q, { forAnswer = true } = {}) {
   if (!q.group) return q.text;
   return [
     q.stem && `Main question ${q.groupNumber}: ${q.stem}`,
     `Part ${q.label}: ${q.text}`,
-    `Answer only part ${q.label}.`
+    forAnswer && `Answer only part ${q.label}.`
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+// "[diagram: caption]" lines the AI puts in answers (see FORMAT_RULES).
+const DIAGRAM_LINE_RE = /^\[(?:diagram|figure|fig)\s*:?\s*([^|\]]*?)\s*(?:\|\s*\d{1,2}\s*)?\]$/gim;
+
+/** The diagrams an answer asks for: [{ caption, index }]. */
+export function answerDiagrams(answer) {
+  return [...String(answer || '').matchAll(DIAGRAM_LINE_RE)].map((m, i) => ({
+    caption: m[1] || 'Diagram',
+    index: i
+  }));
+}
+
+/** Replaces the n-th "[diagram: ...]" line of an answer. */
+export function replaceDiagramLine(answer, index, replacement) {
+  let n = -1;
+  return String(answer || '').replace(DIAGRAM_LINE_RE, (line) =>
+    ++n === index ? replacement : line
+  );
+}
+
+/**
+ * Prompt for an image-making AI (Gemini, ChatGPT...) to draw one diagram
+ * from an answer, in a style that sits well on a handwritten page.
+ */
+export function diagramPrompt({
+  question,
+  answer,
+  index,
+  caption,
+  docInfo,
+  ink,
+  withFigure = false
+}) {
+  // The answer text around the diagram, so the labels match what's written.
+  const marked = replaceDiagramLine(answer, index, '>>> THE DIAGRAM GOES HERE <<<')
+    .replace(DIAGRAM_LINE_RE, '')
+    .trim();
+  const at = Math.max(0, marked.indexOf('>>> THE DIAGRAM'));
+  const context = marked
+    .slice(Math.max(0, at - 1500), at + 1500)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  const figure = withFigure
+    ? '\nThe figure from the question paper is attached: take the data (names, values, edges...) from it.\n'
+    : '';
+  return `Create an image: a diagram for a university assignment answer.
+
+Diagram: ${caption}
+${docInfo.subject ? `Subject: ${docInfo.subject}\n` : ''}Question: ${questionForPrompt(question, { forAnswer: false })}
+${figure}
+The answer around the diagram (use the same names, values and labels):
+---
+${context}
+---
+
+Requirements:
+- A clear, simple, correctly labelled diagram of exactly "${caption}", as a student would draw it in an exam answer.
+- Looks hand-drawn with a ${ink} pen on plain white paper: thin lines, neat handwritten labels, no colours or shading, no 3D.
+- Plain white background, landscape layout, everything inside the frame with a small margin.
+- Only the labels the diagram needs: no title, caption, watermark or extra text (the caption is written under it separately).
+- Every label, number and arrow must be correct and readable.`;
 }
 
 export function targetWords(question, template) {

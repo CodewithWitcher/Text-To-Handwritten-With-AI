@@ -34,6 +34,7 @@ import {
   setActiveCourse,
   getAssignmentValues,
   clearAssignmentValues,
+  fieldValue,
   PROFILE_FIELDS
 } from './profile.mjs';
 import {
@@ -64,6 +65,9 @@ import {
   bulkCopyPrompt,
   singleCopyPrompt,
   splitSubQuestions,
+  answerDiagrams,
+  diagramPrompt,
+  replaceDiagramLine,
   parseBulkAnswers,
   composeDocument,
   targetWords
@@ -79,6 +83,9 @@ import {
   imageFromClipboard,
   imageIdsIn,
   imageMarker,
+  imageRefsIn,
+  blendedImage,
+  readClipboardImage,
   resolveImageBlocks
 } from './images.mjs';
 import { extractPdfText, fileToBase64, pdfPageImages } from './pdf-input.mjs';
@@ -368,6 +375,10 @@ const renderStylePreview = debounce(async () => {
 function onStyleChange() {
   renderStylePreview();
   frontPage && frontPage.redraw();
+  // Answer image previews follow the ink colour and "Ruled lines".
+  $$('#questions-list .q-answer').forEach((t) =>
+    t.dispatchEvent(new Event('input'))
+  );
   if (pageEls.length) markStale();
 }
 
@@ -1364,7 +1375,7 @@ function renderQuestions() {
     // Images inside the answer go exactly where the cursor is.
     const insertInAnswer = async (file) => {
       try {
-        const id = await addImage(file);
+        const id = await addImage(file, { kind: 'drawing' });
         const at = answer.selectionStart ?? answer.value.length;
         const before = answer.value.slice(0, at).replace(/[ \t]*$/, '');
         const after = answer.value.slice(at).replace(/^[ \t]*/, '');
@@ -1374,6 +1385,7 @@ function renderQuestions() {
         draft.answers[q.id] = answer.value;
         saveDraft();
         autoGrow(answer);
+        refreshAnswerExtras();
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -1403,10 +1415,226 @@ function renderQuestions() {
       autoGrow(text);
       updateWarn(text.value);
     });
+    // Each "[diagram: ...]" in the answer: copy a prompt for an image AI,
+    // then put the picture it makes in place of the blank diagram space.
+    const diagramsBox = el('div.q-diagrams');
+    const inkName = () => {
+      const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(
+        String(style.inkBody || '')
+      );
+      if (!m) return 'blue';
+      const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16));
+      return b > r + 30 && b > g ? 'blue' : 'black';
+    };
+    const replaceDiagram = async (d, file) => {
+      const current = answerDiagrams(answer.value)[d.index];
+      if (!current)
+        return toast('That diagram line is no longer in the answer.', 'error');
+      try {
+        const id = await addImage(file, { kind: 'drawing' });
+        answer.value = replaceDiagramLine(
+          answer.value,
+          d.index,
+          imageMarker(id, `Fig: ${current.caption}`)
+        );
+        draft.answers[q.id] = answer.value;
+        saveDraft();
+        autoGrow(answer);
+        refreshAnswerExtras();
+        toast('Diagram added to the answer.', 'success');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    };
+    const renderDiagrams = () => {
+      const list = answerDiagrams(answer.value);
+      diagramsBox.textContent = '';
+      if (!list.length) return;
+      diagramsBox.append(
+        el('span.q-label', { text: 'Diagrams in this answer' }),
+        el('p.adv-hint', {
+          text:
+            'Copy the prompt into Gemini or ChatGPT, copy the picture it makes (right-click → Copy image), then click "Paste image". Until then, blank space is left on the page to draw it by hand.'
+        })
+      );
+      for (const d of list) {
+        diagramsBox.append(
+          el('div.q-diagram', {}, [
+            el('span.q-diagram-name', { text: `Fig: ${d.caption}` }),
+            // Text only: no image from this question goes along unless asked
+            // for with the next button.
+            el('button.adv-small', {
+              type: 'button',
+              text: 'Copy diagram prompt',
+              onclick: async () => {
+                const prompt = diagramPrompt({
+                  question: q,
+                  answer: answer.value,
+                  index: d.index,
+                  caption: d.caption,
+                  docInfo: draft.docInfo,
+                  ink: inkName()
+                });
+                (await copyText(prompt))
+                  ? toast('Diagram prompt copied. Paste it into Gemini or ChatGPT.', 'success')
+                  : toast('Copy failed.', 'error');
+              }
+            }),
+            // Only when the diagram must use data from the question's own
+            // figure (e.g. "draw the MST of the graph in Figure 1").
+            (q.figures || []).length > 0 &&
+              el('button.adv-small', {
+                type: 'button',
+                text: '+ with question figure',
+                title:
+                  "Also copy the question's figure, when the diagram must use its data (e.g. the graph's nodes and weights)",
+                onclick: async () => {
+                  const prompt = diagramPrompt({
+                    question: q,
+                    answer: answer.value,
+                    index: d.index,
+                    caption: d.caption,
+                    docInfo: draft.docInfo,
+                    ink: inkName(),
+                    withFigure: true
+                  });
+                  if (await copyTextWithImages(prompt, q.figures))
+                    return toast(
+                      "Diagram prompt and the question's figure copied. Paste into Gemini or ChatGPT.",
+                      'success'
+                    );
+                  (await copyText(prompt))
+                    ? toast(
+                        'Prompt copied, but this browser couldn\'t copy the figure with it: use "Copy figure" too.',
+                        'info'
+                      )
+                    : toast('Copy failed.', 'error');
+                }
+              }),
+            el('button.adv-small', {
+              type: 'button',
+              text: 'Paste image',
+              title: 'Use the image you copied from the AI',
+              onclick: async () => {
+                let img = null;
+                try {
+                  img = await readClipboardImage();
+                } catch (e) {
+                  /* blocked or empty: handled below */
+                }
+                if (!img)
+                  return toast(
+                    'No image on the clipboard. Copy the image in the AI chat first (right-click → Copy image), or use "Upload image".',
+                    'info'
+                  );
+                replaceDiagram(d, img);
+              }
+            }),
+            el('button.adv-small', {
+              type: 'button',
+              text: 'Upload image',
+              onclick: () => pickImage((file) => replaceDiagram(d, file))
+            })
+          ])
+        );
+      }
+    };
+    // The "[image: ...]" lines in the answer, shown as the pictures they
+    // stand for (as they will look on the page), so it's clear what's where.
+    const imagesBox = el('div.q-answer-imgs');
+    const setAnswer = (value) => {
+      answer.value = value;
+      draft.answers[q.id] = value;
+      saveDraft();
+      autoGrow(answer);
+      refreshAnswerExtras();
+    };
+    let imagesKey = '';
+    const renderAnswerImages = async () => {
+      const refs = imageRefsIn(answer.value);
+      const key =
+        refs.map((r) => r.marker).join('\n') + style.inkBody + style.lines;
+      if (key === imagesKey) return; // typing elsewhere: nothing to redo
+      imagesKey = key;
+      const items = [];
+      for (const [i, ref] of refs.entries()) {
+        const img = await blendedImage(ref.id, style.inkBody);
+        items.push(
+          el('figure.q-answer-img', {}, [
+            img
+              ? el(style.lines ? 'img.ruled' : 'img', {
+                  src: img.src,
+                  alt: ref.caption || 'Image in the answer'
+                })
+              : el('p.adv-hint', { text: 'Image missing: add it again.' }),
+            el('figcaption', {}, [
+              el('span', {
+                text: `${i + 1}. ${ref.caption || 'Image (no caption)'}`
+              }),
+              el('button.adv-small', {
+                type: 'button',
+                text: 'Replace',
+                onclick: () =>
+                  pickImage(async (file) => {
+                    try {
+                      const id = await addImage(file, { kind: 'drawing' });
+                      setAnswer(
+                        answer.value.replace(
+                          ref.marker,
+                          imageMarker(id, ref.caption)
+                        )
+                      );
+                      deleteImage(ref.id);
+                    } catch (err) {
+                      toast(err.message, 'error');
+                    }
+                  })
+              }),
+              el('button.adv-small', {
+                type: 'button',
+                text: 'Remove',
+                onclick: () => {
+                  if (!window.confirm('Remove this image from the answer?')) return;
+                  // Back to a blank diagram space if it had a caption.
+                  const back = /^Fig:\s*/i.test(ref.caption)
+                    ? `[diagram: ${ref.caption.replace(/^Fig:\s*/i, '')}]`
+                    : '';
+                  setAnswer(
+                    answer.value
+                      .replace(ref.marker, back)
+                      .replace(/\n{3,}/g, '\n\n')
+                  );
+                  deleteImage(ref.id);
+                }
+              })
+            ])
+          ])
+        );
+      }
+      // Still the latest answer? (another render may have started meanwhile)
+      if (key !== imagesKey) return;
+      imagesBox.textContent = '';
+      if (!items.length) return;
+      imagesBox.append(
+        el('span.q-label', { text: 'Images in this answer' }),
+        el('p.adv-hint', {
+          text:
+            'Each "[image: …]" line in the answer is one of these pictures, shown as it will look on the page.'
+        }),
+        ...items
+      );
+    };
+    const refreshAnswerExtras = () => {
+      renderDiagrams();
+      renderAnswerImages();
+    };
+    refreshAnswerExtras();
+
     answer.addEventListener('input', () => {
       draft.answers[q.id] = answer.value;
       saveDraft();
       autoGrow(answer);
+      refreshAnswerExtras();
     });
 
     const card = el('div.q-card', { dataset: { id: q.id } }, [
@@ -1525,6 +1753,8 @@ function renderQuestions() {
         el('div.q-col', {}, [
           el('span.q-label', { text: 'Answer' }),
           answer,
+          imagesBox,
+          diagramsBox,
           el('button.adv-small.q-add-img', {
             type: 'button',
             text: 'Paste answer',
@@ -1552,6 +1782,7 @@ function renderQuestions() {
               draft.answers[q.id] = reply;
               saveDraft();
               autoGrow(answer);
+              refreshAnswerExtras();
               toast('Answer pasted.', 'success');
             }
           }),
@@ -1644,7 +1875,8 @@ async function generateAnswers(onlyMissing, subset) {
           saveDraft();
           if (card) {
             $('.q-answer', card).value = draft.answers[q.id];
-            autoGrow($('.q-answer', card));
+            // Refreshes the size and the diagram buttons for the new answer.
+            $('.q-answer', card).dispatchEvent(new Event('input'));
             $('.q-gen', card).textContent = 'Regenerate';
           }
           if (qStatus)
@@ -1741,7 +1973,9 @@ function initBuild() {
       docText.value = text;
       saveDraft();
     }
-    const blocks = await resolveImageBlocks(parseDocument(text));
+    const blocks = await resolveImageBlocks(parseDocument(text), {
+      ink: style.inkBody
+    });
     if (!blocks.some((b) => b.type !== 'break')) {
       return toast(
         draft.source === 'own'
@@ -1821,11 +2055,7 @@ function initBuild() {
       const front = frontPage.isEnabled()
         ? await frontPage.exportDataUrl()
         : null;
-      const name =
-        (draft.docInfo.title || 'assignment')
-          .replace(/[^\w\- ]+/g, '')
-          .trim()
-          .replace(/\s+/g, '-') || 'assignment';
+      const name = outputName();
       const bytes = await buildPdf({
         frontPage: front,
         pages,
@@ -1846,9 +2076,15 @@ function initBuild() {
     try {
       const pages = await capture();
       if (frontPage.isEnabled())
-        downloadDataUrl(await frontPage.exportDataUrl(), 'page-00-front.jpg');
+        downloadDataUrl(
+          await frontPage.exportDataUrl(),
+          `${outputName()}_page-00-front.jpg`
+        );
       for (let i = 0; i < pages.length; i++) {
-        downloadDataUrl(pages[i], `page-${String(i + 1).padStart(2, '0')}.jpg`);
+        downloadDataUrl(
+          pages[i],
+          `${outputName()}_page-${String(i + 1).padStart(2, '0')}.jpg`
+        );
         await sleep(250);
       }
     } catch (err) {
@@ -1857,6 +2093,43 @@ function initBuild() {
       setBusy(e.target, false);
     }
   });
+}
+
+/**
+ * File name for downloads: course code first, then the assignment title,
+ * e.g. "MCS-211_MCA-First-Semester-Assignment". No title: programme,
+ * semester and "Assignment". The code isn't repeated if the title has it.
+ */
+function outputName() {
+  const clean = (t) =>
+    String(t || '')
+      .replace(/[^\w\- ]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-{2,}/g, '-')
+      .replace(/^-|-$/g, '');
+  const code = String(fieldValue('subjectCode') || '').trim();
+  let title =
+    draft.docInfo.title ||
+    [
+      fieldValue('programmeCode') || fieldValue('course'),
+      fieldValue('semester') && `Semester ${fieldValue('semester')}`.replace(
+        /^Semester\s+(semester|sem)\b\.?\s*/i,
+        'Semester '
+      ),
+      'Assignment'
+    ]
+      .filter(Boolean)
+      .join(' ');
+  if (code) {
+    // "MCSL-217", "MCSL 217" and "MCSL217" all count as the code.
+    const parts = code.match(/[a-z]+|\d+/gi) || [];
+    if (parts.length) {
+      const re = new RegExp(parts.join('[\\s\\-_./]*'), 'gi');
+      title = title.replace(re, ' ');
+    }
+  }
+  return [clean(code), clean(title)].filter(Boolean).join('_') || 'assignment';
 }
 
 function showPreview(pages) {
