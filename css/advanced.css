@@ -346,6 +346,74 @@ body.dark .adv-step > summary .num {
 .fp-handle:focus {
   outline: 2px solid var(--adv-accent);
 }
+/* Name tag on each field box */
+.fp-tag {
+  position: absolute;
+  left: -1px;
+  bottom: 100%;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 4px 4px 0 0;
+  background: rgba(26, 115, 232, 0.85);
+  color: #fff;
+  font: 11px/1.4 var(--font-family-primary);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.fp-handle.empty .fp-tag {
+  background: rgba(217, 48, 37, 0.9);
+}
+.fp-handle:hover .fp-tag,
+.fp-handle.selected .fp-tag,
+.fp-handle:focus .fp-tag,
+.fp-handle.empty .fp-tag {
+  opacity: 1;
+}
+.fp-handle.selected {
+  border: 2px solid var(--adv-accent);
+  background: rgba(26, 115, 232, 0.12);
+}
+
+/* Toolbar for the selected field */
+.fp-popover {
+  position: absolute;
+  z-index: 5;
+  width: 300px;
+  max-width: 100%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: normal;
+  border: 1px solid var(--field-borders);
+  border-radius: 8px;
+  background: var(--background-primary);
+  color: var(--font-color-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.fp-popover select,
+.fp-popover input {
+  padding: 7px 8px;
+  font-size: 0.85rem;
+}
+.fp-pop-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fp-pop-row select {
+  flex: 1;
+}
+.fp-row.selected {
+  outline: 2px solid var(--adv-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .fp-row {
   display: grid;
   grid-template-columns: 1.2fr 1.4fr 70px auto;

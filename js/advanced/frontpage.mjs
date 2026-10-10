@@ -633,6 +633,10 @@ export class FrontPageEditor {
       }
     });
     window.addEventListener('resize', () => this.positionHandles());
+    // Clicking empty space on the page deselects.
+    this.handles.addEventListener('pointerdown', (e) => {
+      if (e.target === this.handles) this.deselect();
+    });
   }
 
   setStatus(msg) {
@@ -747,7 +751,176 @@ export class FrontPageEditor {
     }
     this.renderList();
     this.positionHandles();
+    this.renderPopover();
     this.renderSaved();
+  }
+
+  /* ---------------------- Selecting, editing, deleting ---------------------- */
+
+  itemName(item) {
+    if (item.key.startsWith('other:'))
+      return `Other: ${item.label || ''}`.trim();
+    const f = allFields(getProfile()).find((x) => x.key === item.key);
+    return f ? f.label.replace(/ \(.*\)$/, '') : item.key;
+  }
+
+  /** Field picker shared by the on-page toolbar and the list. */
+  fieldSelect(item) {
+    const select = el('select', { 'aria-label': 'Which field this is' });
+    for (const f of allFields(getProfile())) {
+      select.append(el('option', { value: f.key, text: f.label }));
+    }
+    if (item.key.startsWith('other:')) {
+      select.append(
+        el('option', { value: item.key, text: this.itemName(item) })
+      );
+    }
+    select.value = item.key;
+    select.addEventListener('change', () => {
+      item.key = select.value;
+      item.value = '';
+      this.persist();
+      this.redraw();
+    });
+    return select;
+  }
+
+  select(id) {
+    this.selectedId = id;
+    this.redraw();
+    const handle = this.handles.querySelector(`[data-id="${id}"]`);
+    if (handle) handle.focus({ preventScroll: true });
+  }
+
+  deselect() {
+    if (!this.selectedId) return;
+    this.selectedId = null;
+    this.redraw();
+  }
+
+  removeItem(item) {
+    const index = this.state.items.indexOf(item);
+    if (index < 0) return;
+    this.state.items.splice(index, 1);
+    this.lastRemoved = { item, index };
+    if (this.selectedId === item.id) this.selectedId = null;
+    this.persist();
+    this.redraw();
+    this.status.textContent = `Removed "${this.itemName(item)}". `;
+    this.status.append(
+      el('button.adv-small', {
+        type: 'button',
+        text: 'Undo',
+        onclick: () => this.undoRemove()
+      })
+    );
+  }
+
+  undoRemove() {
+    if (!this.lastRemoved) return;
+    const { item, index } = this.lastRemoved;
+    this.lastRemoved = null;
+    this.state.items.splice(Math.min(index, this.state.items.length), 0, item);
+    this.persist();
+    this.setStatus(`Restored "${this.itemName(item)}".`);
+    this.select(item.id);
+  }
+
+  /** Small toolbar next to the selected field: field, text, size, delete. */
+  renderPopover() {
+    if (this.popover) this.popover.remove();
+    this.popover = null;
+    const item = this.state.items.find((x) => x.id === this.selectedId);
+    if (!item) return;
+
+    const value = el('input', {
+      placeholder: fieldValue(item.key) || 'Type the text',
+      'aria-label': 'Text to write'
+    });
+    value.value = item.value || '';
+    value.addEventListener('input', () => {
+      item.value = value.value;
+      this.persist();
+      this.refreshLight();
+    });
+    value.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'Escape') this.deselect();
+    });
+
+    const resize = (delta) => {
+      item.size = Math.max(8, Math.round(item.size + delta));
+      this.persist();
+      this.redraw();
+    };
+
+    this.popover = el(
+      'div.fp-popover',
+      { role: 'dialog', 'aria-label': `Edit ${this.itemName(item)}` },
+      [
+        el('div.fp-pop-row', {}, [
+          this.fieldSelect(item),
+          el('button.adv-icon-btn', {
+            type: 'button',
+            text: '×',
+            title: 'Close (Esc)',
+            'aria-label': 'Close',
+            onclick: () => this.deselect()
+          })
+        ]),
+        value,
+        el('div.fp-pop-row', {}, [
+          el('span.adv-hint', { text: 'Size' }),
+          el('button.adv-small', {
+            type: 'button',
+            text: 'A−',
+            title: 'Smaller',
+            onclick: () => resize(-2)
+          }),
+          el('button.adv-small', {
+            type: 'button',
+            text: 'A+',
+            title: 'Bigger',
+            onclick: () => resize(2)
+          }),
+          el('span.q-spacer'),
+          el('button.adv-small.delete-button', {
+            type: 'button',
+            text: 'Delete field',
+            onclick: () => this.removeItem(item)
+          })
+        ]),
+        el('small.adv-hint', {
+          text:
+            'Leave the text empty to use your profile. Drag the box to move it.'
+        })
+      ]
+    );
+    this.handles.parentElement.append(this.popover);
+    this.placePopover();
+  }
+
+  placePopover() {
+    if (!this.popover) return;
+    const handle = this.handles.querySelector(`[data-id="${this.selectedId}"]`);
+    if (!handle) return;
+    const wrap = this.handles.parentElement;
+    const pw = this.popover.offsetWidth;
+    const ph = this.popover.offsetHeight;
+    let left = handle.offsetLeft;
+    let top = handle.offsetTop + handle.offsetHeight + 8;
+    // Keep it inside the preview; flip above the field near the bottom.
+    left = Math.max(0, Math.min(left, wrap.clientWidth - pw));
+    if (top + ph > wrap.clientHeight)
+      top = Math.max(0, handle.offsetTop - ph - 8);
+    this.popover.style.left = `${left}px`;
+    this.popover.style.top = `${top}px`;
+  }
+
+  /** Redraw canvas + boxes without rebuilding the toolbar (keeps typing focus). */
+  refreshLight() {
+    drawFrontPage(this.canvas, this.img, this.state.items, this.getStyle());
+    this.positionHandles();
+    this.highlightRow();
   }
 
   positionHandles() {
@@ -771,19 +944,29 @@ export class FrontPageEditor {
       } else if (item.maxWidth) {
         width = Math.min(Math.max(width, 40), item.maxWidth);
       }
-      const h = el('div.fp-handle', {
-        title: `${text} (drag to move, arrow keys to nudge)`,
-        style: {
-          left: `${left * scale}px`,
-          top: `${(item.y - first.size * 0.85) * scale}px`,
-          width: `${width * scale}px`,
-          height: `${first.size * 1.05 * scale}px`
-        }
-      });
+      const h = el(
+        'div.fp-handle',
+        {
+          dataset: { id: item.id },
+          title: `${this.itemName(
+            item
+          )}: click to edit or delete, drag to move`,
+          'aria-label': `${this.itemName(item)}: ${itemText(item) || 'empty'}`,
+          style: {
+            left: `${left * scale}px`,
+            top: `${(item.y - first.size * 0.85) * scale}px`,
+            width: `${width * scale}px`,
+            height: `${first.size * 1.05 * scale}px`
+          }
+        },
+        [el('span.fp-tag', { text: this.itemName(item) })]
+      );
       if (!itemText(item)) h.classList.add('empty');
+      if (item.id === this.selectedId) h.classList.add('selected');
       this.makeDraggable(h, item, scale);
       this.handles.append(h);
     }
+    this.placePopover();
   }
 
   makeDraggable(handle, item, scale) {
@@ -794,19 +977,24 @@ export class FrontPageEditor {
         x: e.clientX,
         y: e.clientY,
         left: parseFloat(handle.style.left),
-        top: parseFloat(handle.style.top)
+        top: parseFloat(handle.style.top),
+        moved: { x: 0, y: 0 },
+        dragged: false
       };
-      start.moved = { x: 0, y: 0 };
       handle.classList.add('dragging');
     });
     handle.addEventListener('pointermove', (e) => {
       if (!start) return;
       const dx = (e.clientX - start.x) / scale;
       const dy = (e.clientY - start.y) / scale;
+      // Small jitters are clicks, not drags.
+      if (!start.dragged && Math.hypot(dx * scale, dy * scale) < 4) return;
+      start.dragged = true;
       shiftItem(item, dx - start.moved.x, dy - start.moved.y);
       start.moved = { x: dx, y: dy };
       handle.style.left = `${start.left + dx * scale}px`;
       handle.style.top = `${start.top + dy * scale}px`;
+      this.placePopover();
       cancelAnimationFrame(this.raf);
       this.raf = requestAnimationFrame(() =>
         drawFrontPage(this.canvas, this.img, this.state.items, this.getStyle())
@@ -814,15 +1002,28 @@ export class FrontPageEditor {
     });
     const end = () => {
       if (!start) return;
+      const wasDrag = start.dragged;
       start = null;
       handle.classList.remove('dragging');
-      this.persist();
+      if (wasDrag) this.persist();
+      // A click (or the end of a drag) selects the field.
+      if (this.selectedId !== item.id) this.select(item.id);
     };
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
-    // Arrow keys for fine positioning.
+
     handle.tabIndex = 0;
     handle.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        this.removeItem(item);
+        return;
+      }
+      if (e.key === 'Escape') return this.deselect();
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        return this.select(item.id);
+      }
       const step = e.shiftKey ? 10 : 2;
       const d = {
         ArrowLeft: [-step, 0],
@@ -834,35 +1035,26 @@ export class FrontPageEditor {
       e.preventDefault();
       shiftItem(item, d[0], d[1]);
       this.persist();
-      this.redraw();
+      this.refreshLight();
+      this.handles
+        .querySelector(`[data-id="${item.id}"]`)
+        ?.focus({ preventScroll: true });
     });
   }
 
+  highlightRow() {
+    for (const row of this.list.querySelectorAll('.fp-row')) {
+      row.classList.toggle('selected', row.dataset.id === this.selectedId);
+    }
+  }
+
   renderList() {
-    const fields = allFields(getProfile());
     this.list.textContent = '';
     if (!this.state.items.length) {
       this.list.append(el('p.adv-hint', { text: 'No fields placed yet.' }));
       return;
     }
     for (const item of this.state.items) {
-      const select = el('select', { 'aria-label': 'Field' });
-      for (const f of fields) {
-        select.append(el('option', { value: f.key, text: f.label }));
-      }
-      if (item.key.startsWith('other:')) {
-        select.append(
-          el('option', { value: item.key, text: `Other: ${item.label || ''}` })
-        );
-      }
-      select.value = item.key;
-      select.addEventListener('change', () => {
-        item.key = select.value;
-        item.value = '';
-        this.persist();
-        this.redraw();
-      });
-
       const value = el('input', {
         placeholder: fieldValue(item.key) || 'Type the value',
         'aria-label': 'Value override'
@@ -871,8 +1063,12 @@ export class FrontPageEditor {
       value.addEventListener('input', () => {
         item.value = value.value;
         this.persist();
-        drawFrontPage(this.canvas, this.img, this.state.items, this.getStyle());
-        this.positionHandles();
+        this.refreshLight();
+      });
+      value.addEventListener('focus', () => {
+        this.selectedId = item.id;
+        this.refreshLight();
+        this.renderPopover();
       });
 
       const size = el('input', {
@@ -889,24 +1085,21 @@ export class FrontPageEditor {
       });
 
       this.list.append(
-        el('div.fp-row', {}, [
-          select,
+        el('div.fp-row', { dataset: { id: item.id } }, [
+          this.fieldSelect(item),
           value,
           size,
           el('button.adv-icon-btn', {
             type: 'button',
             text: '×',
-            title: 'Remove',
-            'aria-label': 'Remove field',
-            onclick: () => {
-              this.state.items = this.state.items.filter((x) => x !== item);
-              this.persist();
-              this.redraw();
-            }
+            title: 'Delete field',
+            'aria-label': `Delete ${this.itemName(item)}`,
+            onclick: () => this.removeItem(item)
           })
         ])
       );
     }
+    this.highlightRow();
   }
 
   /* Saved front pages: reuse the same layout for every assignment. */
