@@ -616,6 +616,19 @@
           <summary><span class="num">2</span> Front page <small>(optional)</small></summary>
           <div class="adv-step-body" id="fp-root">
             <label class="adv-check"><input id="fp-enabled" type="checkbox" /> Add a front page to the PDF</label>
+            <div class="fp-course-bar">
+              <label class="block" for="fp-course">Course for this assignment</label>
+              <div class="adv-row">
+                <select id="fp-course"></select>
+                <button type="button" id="fp-manage-courses">Manage courses</button>
+              </div>
+              <p class="adv-hint">
+                The course's title, code, assignment no. and teacher fill the
+                front page. Values found in your question paper (after you
+                approve them) take priority for this assignment:
+              </p>
+              <div id="fp-assignment-values" class="adv-chips"></div>
+            </div>
             <div id="fp-empty">
               <p class="adv-hint">
                 Upload your university/college front page as an image or PDF.
@@ -766,10 +779,45 @@
           header. Only academic details (course, subject…) are shared with the
           AI for context; your name and IDs are never sent.
         </p>
+        <fieldset class="adv-profile-file">
+          <legend>Fill your profile from a file</legend>
+          <ol class="adv-steps-list">
+            <li>
+              <b>Download the template.</b> It lists every field we use, what
+              it means, and an example. Anything you've already saved is
+              filled in.
+            </li>
+            <li>
+              <b>Fill it in</b> with any text editor (TextEdit, Notepad,
+              VS Code). Type your details between the quotes.
+            </li>
+            <li><b>Import it.</b> Your details appear below instantly.</li>
+          </ol>
+          <div class="adv-toolbar">
+            <button type="button" id="profile-template" class="generate-image-button">
+              1. Download profile template
+            </button>
+            <label class="adv-file-btn"
+              >3. Import profile<input
+                id="profile-import"
+                type="file"
+                accept="application/json,.json"
+            /></label>
+            <span id="profile-import-status" class="adv-status" role="status"></span>
+          </div>
+        </fieldset>
+
         <div id="profile-form"></div>
+
+        <h4>Backup</h4>
+        <p class="adv-hint">
+          A full backup includes your profile, templates, front-page layouts,
+          drafts and settings (never API keys). Use it to move to another
+          browser.
+        </p>
         <div class="adv-toolbar adv-data-actions">
-          <button type="button" id="data-export">Export my data (JSON)</button>
-          <label class="adv-file-btn">Import data<input id="data-import" type="file" accept="application/json,.json" /></label>
+          <button type="button" id="data-export">Back up all data</button>
+          <label class="adv-file-btn">Restore backup<input id="data-import" type="file" accept="application/json,.json" /></label>
           <button type="button" id="data-clear" class="delete-button">Delete all saved data</button>
         </div>
       </div>

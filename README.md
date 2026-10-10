@@ -28,7 +28,7 @@ A guided, four-step flow:
    Then generate the answers one by one with AI. Answer length follows the marks and the template. You can edit, regenerate or reorder anything. **No API key?** Click *Copy prompt*, paste it into ChatGPT, Claude.ai or DeepSeek, paste the reply back, and click *Import answers*.
 4. **Preview & download.** Text flows across A4 pages: words are never cut, and headings are never left alone at the bottom of a page. Edit the final text if you like, then download one PDF (front page first) or the individual page images.
 
-**My Profile** stores your name, roll number, course, subject and other details in this browser. **AI Settings** supports Claude, DeepSeek, OpenAI, Google Gemini, OpenRouter, Groq, Ollama (local, no key) and any OpenAI-compatible endpoint.
+**My Profile** stores your name, roll number, course, subject and other details in this browser. To fill it from a file, click *Download profile template*, fill in the JSON in any text editor, then *Import profile*. **AI Settings** supports Claude, DeepSeek, OpenAI, Google Gemini, OpenRouter, Groq, Ollama (local, no key) and any OpenAI-compatible endpoint.
 
 ## Run locally
 

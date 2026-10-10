@@ -10,18 +10,41 @@ import { uid } from './ui.mjs';
 
 const CHUNK_CHARS = 60000;
 
-const MARKS_RE = /[[(]\s*(\d+(?:\.\d+)?)\s*(?:marks?|m|pts?|points?)\s*[\])]|\b(\d+(?:\.\d+)?)\s*marks?\b/i;
 const WORDS_RE = /(?:in\s+)?(?:about|around|approx\.?|max(?:imum)?\.?|not more than|within)?\s*(\d{2,4})\s*words/i;
-const Q_START_RE = /^\s*(?:Q(?:uestion|ues|n)?\s*\.?\s*(?:No\.?\s*)?)?(\d{1,3})\s*(?:[.):\-–]|\s(?=[A-Z(]))\s*(.*)$/i;
-const SUBPART_RE = /^\s*(?:\(?[a-hivx]{1,4}[).]|[a-h]\s*[.)])\s+/i;
+
+// "Q1:", "Q.1", "Question 1", "Q1)".
+const EXPLICIT_Q_RE = /^\s*Q(?:uestion|ues|n)?\s*\.?\s*(?:No\.?\s*)?(\d{1,2})\s*(?:[:.)\-–]|\s|$)\s*(.*)$/i;
+// OCR misreads in scans: "QI:", "Ql:", "QI12:", "QI5:", "Qs:" (1->I/l/|, 5->s,
+// 0->O). Only trusted with a ":" "." or ")" after it.
+const OCR_Q_RE = /^\s*Q(?:uestion|ues)?\s*\.?\s*([0-9IlOoSs|]{1,3})\s*[:.)]\s*(.*)$/;
+const SECTION_RE = /^\s*section\s*[-–:]?\s*([0-9A-Z]{1,3})\b/i;
+const EQUAL_MARKS_RE = /(?:carry|carries)\s+equal\s+marks[^\d]{0,25}(\d+(?:\.\d+)?)\s*marks?|each\s+question\s+carries\s+(\d+(?:\.\d+)?)\s*marks?/i;
+// "1.", "1)", "1 What..." (used only when a paper has no Q markers).
+const NUMBERED_RE = /^\s*(\d{1,2})\s*(?:[.):\-–]|\s(?=[A-Z(]))\s*(.*)$/;
+// Sub-parts: (a) a) (i) (1) a. - and OCR's "¢" for c.
+const SUBPART_RE = /^\s*(?:\(\s*(?:[a-h]|[ivx]{1,4}|\d{1,2}|¢)\s*\)|(?:[a-h]|[ivx]{1,4}|¢)\s*[.)])\s*/i;
+// Lines that open a course section in a booklet ("Course Code : MCS-211").
+const HEADER_RE = /^\s*(course\s*code|course\s*title|assignment\s*(number|no)|maximum\s*marks|weightage|last\s*dates?\s*(of|for)\s*submission)\b/i;
+const MARK_NUM_RE = /(\d+(?:\.\d+)?)\s*marks?\b/gi;
+
+/**
+ * Marks for a question: a total in the first line wins ("Q3: (3*4= 12 Marks)"),
+ * otherwise the sub-part marks are added up ("(a) ... (15 Marks)" ...).
+ */
+function computeMarks(text, headText = String(text).split('\n')[0]) {
+  const head = [...String(headText).matchAll(MARK_NUM_RE)];
+  if (head.length) return head[head.length - 1][1];
+  const all = [...String(text).matchAll(MARK_NUM_RE)].map((m) => Number(m[1]));
+  if (!all.length) return '';
+  const total = all.reduce((a, b) => a + b, 0);
+  return String(Math.round(total * 100) / 100);
+}
 
 function normalizeQuestion(q, i) {
   const text = String(q.text || '').trim();
   const marks =
     String(q.marks || '').trim() ||
-    (MARKS_RE.exec(text) || [])[1] ||
-    (MARKS_RE.exec(text) || [])[2] ||
-    '';
+    computeMarks(text, q.head !== undefined ? q.head : undefined);
   const wordLimit =
     String(q.wordLimit || '').trim() || (WORDS_RE.exec(text) || [])[1] || '';
   return {
@@ -33,33 +56,99 @@ function normalizeQuestion(q, i) {
   };
 }
 
+/** Possible question numbers for a (possibly OCR-garbled) token. */
+function numberCandidates(token) {
+  const map = (t) =>
+    t.replace(/[Il|]/g, '1').replace(/[Oo]/g, '0').replace(/[Ss]/g, '5');
+  const out = new Set([Number(map(token))]);
+  // A stray leading I/l/| is often noise: "QI12" is Q12.
+  if (/^[Il|]./.test(token)) out.add(Number(map(token.slice(1))));
+  return [...out].filter((n) => Number.isFinite(n) && n > 0);
+}
+
+/** Matches a question-start line; returns { n, rest } or null. */
+function matchQuestion(line, explicit, last) {
+  const fits = (n) => n > last && n <= last + 3;
+  if (explicit) {
+    let m = EXPLICIT_Q_RE.exec(line);
+    if (m && fits(Number(m[1]))) return { n: Number(m[1]), rest: m[2] };
+    m = OCR_Q_RE.exec(line);
+    if (m) {
+      const n = numberCandidates(m[1]).find(fits);
+      if (n) return { n, rest: m[2] };
+    }
+    return null;
+  }
+  const m = NUMBERED_RE.exec(line);
+  return m && fits(Number(m[1])) ? { n: Number(m[1]), rest: m[2] } : null;
+}
+
+/**
+ * Rule-based question finder (no AI).
+ * - If the paper uses explicit markers (Q1:, Question 2) only those start
+ *   questions, so numbered notes/instructions/sub-parts are never mistaken
+ *   for questions (IGNOU papers have numbered "Important Notes").
+ * - Otherwise numbered lines (1., 2) ...) are used, starting after the
+ *   course header block when there is one.
+ */
 export function extractBasic(rawText) {
   const lines = String(rawText || '')
     .replace(/\r\n/g, '\n')
-    .split('\n');
-  const questions = [];
-  const preamble = [];
-  let current = null;
-  let expected = 1;
+    .split('\n')
+    .map((l) => l.trim());
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const m = Q_START_RE.exec(trimmed);
-    // Accept the next number in sequence (or a restart at 1) as a new question,
-    // which avoids treating "2 marks" or years inside text as question starts.
-    if (
-      m &&
-      m[2] !== undefined &&
-      (Number(m[1]) === expected || (Number(m[1]) === 1 && !current))
-    ) {
-      current = { number: m[1], text: m[2].trim() };
+  const explicit = lines.some((l) => EXPLICIT_Q_RE.test(l) || OCR_Q_RE.test(l));
+  // Questions start after the last header line that precedes them.
+  let start = 0;
+  const firstQ = lines.findIndex((l) =>
+    explicit ? EXPLICIT_Q_RE.test(l) || OCR_Q_RE.test(l) : false
+  );
+  const searchEnd = firstQ >= 0 ? firstQ : lines.length;
+  for (let i = 0; i < searchEnd; i++)
+    if (HEADER_RE.test(lines[i])) start = i + 1;
+  if (firstQ >= 0) start = Math.min(start, firstQ);
+
+  // "This assignment has four questions ... Answer all questions." etc.
+  const instructionLines = [];
+  const questions = [];
+  let current = null;
+  let last = 0;
+  let section = '';
+
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i].replace(/¢/g, 'c');
+    if (!line || /^\d{1,3}$/.test(line)) continue; // blank / page number
+    // A new course section in a combined booklet ends this one.
+    if (current && HEADER_RE.test(line)) {
+      break;
+    }
+    // "Section-2" restarts the numbering (IGNOU lab assignments).
+    const sec = SECTION_RE.exec(line);
+    if (sec && line.length < 40) {
+      section = sec[1];
+      last = 0;
+      continue;
+    }
+    // Accept increasing numbers (OCR can drop one), not restarts or jumps.
+    const q = matchQuestion(line, explicit, last);
+    if (q) {
+      const rest = (q.rest || '').trim();
+      current = {
+        number: section ? `${q.n} (Section ${section})` : String(q.n),
+        text: rest,
+        // Marks on the question line itself are its total ("Q3: (3*4= 12 Marks)").
+        head: SUBPART_RE.test(rest) ? '' : rest
+      };
       questions.push(current);
-      expected = Number(m[1]) + 1;
+      last = q.n;
     } else if (current) {
-      current.text += (SUBPART_RE.test(trimmed) ? '\n' : ' ') + trimmed;
+      const sub = SUBPART_RE.test(line);
+      const sep = sub ? '\n' : current.text ? ' ' : '';
+      // A marks-only line or the opening text right after "QI:" is still the head.
+      if (!sub && current.text === current.head) current.head += sep + line;
+      current.text += sep + line;
     } else {
-      preamble.push(trimmed);
+      instructionLines.push(line);
     }
   }
 
@@ -77,11 +166,20 @@ export function extractBasic(rawText) {
       );
   }
 
+  const instr = instructionLines.join(' ');
+  // "all questions carry equal marks ie. 4 marks"
+  const eq = EQUAL_MARKS_RE.exec(instr);
+  const equalMarks = eq ? eq[1] || eq[2] : '';
+  const fromThis = instr.search(
+    /this assignment has|answer all|attempt (all|any)/i
+  );
   return {
     title: '',
     subject: '',
-    instructions: preamble.join(' ').slice(0, 600),
-    questions: questions.map(normalizeQuestion)
+    instructions: (fromThis >= 0 ? instr.slice(fromThis) : instr).slice(0, 600),
+    questions: questions
+      .map(normalizeQuestion)
+      .map((q) => (q.marks || !equalMarks ? q : { ...q, marks: equalMarks }))
   };
 }
 
@@ -174,6 +272,13 @@ export async function extractWithAI(
     title: String(first.title || '').trim(),
     subject: String(first.subject || '').trim(),
     instructions: String(first.instructions || '').trim(),
+    // Course / assignment details for the front page (reviewed by the user).
+    meta: {
+      subject: String(first.subject || '').trim(),
+      subjectCode: String(first.courseCode || '').trim(),
+      assignmentNo: String(first.assignmentNo || '').trim(),
+      programmeCode: String(first.programmeCode || '').trim()
+    },
     questions
   };
 }

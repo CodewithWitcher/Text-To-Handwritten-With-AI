@@ -399,6 +399,87 @@ body.dark .adv-step > summary .num {
   background: #fff;
 }
 
+/* Profile: fill from a file */
+.adv-profile-file {
+  margin: 0 0 20px;
+  border-color: var(--adv-accent);
+}
+.adv-steps-list {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.adv-steps-list li {
+  margin-bottom: 4px;
+}
+
+/* Courses */
+.adv-course-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1.4fr 1.2fr auto;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+.adv-course-row.active input {
+  border-color: var(--adv-accent);
+}
+.adv-course-head small {
+  opacity: 0.7;
+}
+.fp-course-bar {
+  margin: 10px 0 16px;
+  max-width: 640px;
+}
+.chip-text {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+/* "Use these details?" pop-up */
+.meta-dialog {
+  border: 1px solid var(--field-borders);
+  border-radius: 10px;
+  padding: 20px 22px;
+  width: min(640px, calc(100vw - 32px));
+  background: var(--background-primary);
+  color: var(--font-color-primary);
+}
+.meta-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.meta-dialog h3 {
+  margin-top: 0;
+}
+.meta-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+.meta-row {
+  display: grid;
+  grid-template-columns: auto 130px 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 0.88rem;
+}
+.meta-row .meta-current {
+  grid-column: 3;
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+.meta-row input:not([type='checkbox']) {
+  padding: 8px;
+}
+
+@media (max-width: 700px) {
+  .adv-course-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* Templates tab */
 .adv-list {
   display: flex;

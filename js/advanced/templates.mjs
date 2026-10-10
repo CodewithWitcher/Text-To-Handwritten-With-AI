@@ -212,6 +212,9 @@ export const QUESTIONS_SCHEMA = {
   properties: {
     title: { type: 'string' },
     subject: { type: 'string' },
+    courseCode: { type: 'string' },
+    assignmentNo: { type: 'string' },
+    programmeCode: { type: 'string' },
     instructions: { type: 'string' },
     questions: {
       type: 'array',
@@ -228,14 +231,25 @@ export const QUESTIONS_SCHEMA = {
       }
     }
   },
-  required: ['title', 'subject', 'instructions', 'questions'],
+  required: [
+    'title',
+    'subject',
+    'courseCode',
+    'assignmentNo',
+    'programmeCode',
+    'instructions',
+    'questions'
+  ],
   additionalProperties: false
 };
 
 export const EXTRACT_SYSTEM = `You extract every question from an assessment / assignment / question paper.
-Return JSON with keys: title, subject, instructions, questions.
+Return JSON with keys: title, subject, courseCode, assignmentNo, programmeCode, instructions, questions.
 - title: the assessment title if present, else "".
-- subject: the subject/course name if present, else "".
+- subject: the subject/course name (course title) if present, else "".
+- courseCode: the course/subject/paper code exactly as printed (e.g. "BCS-011"), else "".
+- assignmentNo: the assignment number/code exactly as printed (e.g. "BCA(1)/011/Assignment/2024-25"), else "".
+- programmeCode: the programme/degree code (e.g. "BCA"), else "".
 - instructions: general instructions for students (word limits, "attempt any five", formatting), else "".
 - questions: in order. For each: number (as printed, e.g. "1", "2(a)", "Q3"), text (the full question verbatim including its sub-parts, OR-choices and any data it gives; keep sub-parts on separate lines), marks (e.g. "10" or ""), wordLimit (e.g. "500" or "").
 Do not answer the questions. Do not invent questions. Merge a question that continues across a page break into one item.`;

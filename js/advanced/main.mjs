@@ -24,7 +24,24 @@ import {
   listKeys,
   clearAllData
 } from './store.mjs';
-import { renderProfileForm, getProfile, academicContext } from './profile.mjs';
+import {
+  renderProfileForm,
+  getProfile,
+  academicContext,
+  profileTemplate,
+  importProfile,
+  isProfileFile,
+  setActiveCourse,
+  getAssignmentValues,
+  clearAssignmentValues,
+  PROFILE_FIELDS
+} from './profile.mjs';
+import {
+  detectMeta,
+  mergeMeta,
+  changedMeta,
+  reviewMeta
+} from './assignment-meta.mjs';
 import {
   PROVIDERS,
   getAISettings,
@@ -348,9 +365,60 @@ function headerText() {
 /* -------------------------------- Profile -------------------------------- */
 
 function initProfile() {
-  renderProfileForm($('#profile-form'), () => {
+  const onProfileChange = () => {
     frontPage && frontPage.redraw();
     renderStylePreview();
+    refreshCourseBar();
+  };
+  const renderForm = () =>
+    renderProfileForm($('#profile-form'), onProfileChange);
+  renderForm();
+
+  // Fill-in-the-blanks template so people know exactly what to provide.
+  $('#profile-template').addEventListener('click', () => {
+    downloadText(
+      JSON.stringify(profileTemplate(), null, 2),
+      'my-profile-template.json'
+    );
+    $('#profile-import-status').textContent =
+      'Template downloaded. Fill it in, save it, then click "3. Import profile".';
+  });
+
+  const applyProfileFile = (data) => {
+    const { updated, custom, courses } = importProfile(data);
+    renderForm();
+    onProfileChange();
+    const msg = `Profile imported: ${updated} field(s)${
+      custom ? `, ${custom} custom field(s)` : ''
+    }${courses ? `, ${courses} course(s)` : ''}.`;
+    $('#profile-import-status').textContent = `✓ ${msg}`;
+    toast(msg, 'success');
+  };
+
+  $('#profile-import').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const status = $('#profile-import-status');
+    try {
+      let data;
+      try {
+        data = JSON.parse(await readFileAs(file, 'text'));
+      } catch (err) {
+        throw new Error(
+          `This file isn't valid JSON (${err.message}). Check for a missing quote or comma, or download a fresh template.`
+        );
+      }
+      if (data && data.app === 'text-to-handwriting-ai' && data.data) {
+        throw new Error(
+          'This is a full backup. Use "Restore backup" below instead.'
+        );
+      }
+      applyProfileFile(data);
+    } catch (err) {
+      status.textContent = `✗ ${err.message}`;
+      toast(`Import failed: ${err.message}`, 'error', 7000);
+    }
   });
 
   $('#data-export').addEventListener('click', async () => {
@@ -375,6 +443,11 @@ function initProfile() {
     if (!file) return;
     try {
       const parsed = JSON.parse(await readFileAs(file, 'text'));
+      // A profile template picked here by mistake: import it anyway.
+      if (isProfileFile(parsed) && !parsed.data) {
+        applyProfileFile(parsed);
+        return;
+      }
       if (
         !parsed ||
         parsed.app !== 'text-to-handwriting-ai' ||
@@ -702,6 +775,101 @@ function initFrontPage() {
   $('#fp-enabled').addEventListener('change', (e) =>
     frontPage.setEnabled(e.target.checked)
   );
+
+  $('#fp-course').addEventListener('change', (e) => {
+    setActiveCourse(e.target.value);
+    onFrontValuesChanged();
+  });
+  $('#fp-manage-courses').addEventListener('click', () => goToTab('profile'));
+  refreshCourseBar();
+}
+
+/** Course picker + chips for values approved for this assignment. */
+function refreshCourseBar() {
+  const select = $('#fp-course');
+  if (!select) return;
+  const { courses, activeCourseId } = getProfile();
+  select.textContent = '';
+  select.append(
+    el('option', {
+      value: '',
+      text: courses.length
+        ? '— No course selected —'
+        : '— Add courses in My Profile —'
+    })
+  );
+  for (const c of courses) {
+    const name =
+      [c.code, c.title].filter(Boolean).join(' – ') || 'Untitled course';
+    select.append(el('option', { value: c.id, text: name }));
+  }
+  select.value = activeCourseId;
+
+  const box = $('#fp-assignment-values');
+  box.textContent = '';
+  const values = Object.entries(getAssignmentValues()).filter(([, v]) => v);
+  if (!values.length) {
+    box.append(el('span.adv-hint', { text: 'None yet.' }));
+    return;
+  }
+  for (const [key, value] of values) {
+    const f = PROFILE_FIELDS.find((x) => x.key === key);
+    box.append(
+      el('span.chip', {}, [
+        el('span.chip-text', {
+          text: `${f ? f.label.replace(/ \(.*\)$/, '') : key}: ${value}`
+        }),
+        el('button.chip-x', {
+          type: 'button',
+          text: '×',
+          'aria-label': `Stop using ${value}`,
+          onclick: () => {
+            clearAssignmentValues(key);
+            onFrontValuesChanged();
+          }
+        })
+      ])
+    );
+  }
+  box.append(
+    el('button.adv-small', {
+      type: 'button',
+      text: 'Clear all',
+      onclick: () => {
+        clearAssignmentValues();
+        onFrontValuesChanged();
+      }
+    })
+  );
+}
+
+function onFrontValuesChanged() {
+  refreshCourseBar();
+  frontPage && frontPage.redraw();
+  renderStylePreview();
+  if (pageEls.length) markStale();
+}
+
+/**
+ * Offers values found in the question paper (course code, title, assignment
+ * no. ...) for the front page. Asks only when something would change, and
+ * never twice for the same findings.
+ */
+let lastOffered = '';
+async function offerPaperDetails(found, source) {
+  const changes = changedMeta(found);
+  const signature = JSON.stringify(changes);
+  if (!Object.keys(changes).length || signature === lastOffered) return;
+  lastOffered = signature;
+  const applied = await reviewMeta(found, { source });
+  if (!Object.keys(applied).length) return;
+  if (applied.subject && !draft.docInfo.subject) {
+    draft.docInfo.subject = applied.subject;
+    $('#doc-subject').value = applied.subject;
+    saveDraft();
+  }
+  onFrontValuesChanged();
+  toast('Front page updated with the details from your paper.', 'success');
 }
 
 /* -------------------------------- Content -------------------------------- */
@@ -756,6 +924,7 @@ function initContent() {
       }
       draft.pdfName = file.name;
       saveDraft();
+      offerPaperDetails(detectMeta(draft.pdfText), `"${file.name}"`);
       if (!draft.pdfText.trim())
         info.textContent +=
           ' No text found. Try "Find questions (AI)" with Claude, which can read scanned PDFs.';
@@ -805,6 +974,7 @@ function initContent() {
       return;
     const res = extractBasic(text);
     applyExtraction(res);
+    offerPaperDetails(detectMeta(text), 'the question paper');
     $(
       '#find-status'
     ).textContent = `Found ${res.questions.length} question(s). Check and edit them below.`;
@@ -834,6 +1004,11 @@ function initContent() {
       );
       applyExtraction(res);
       status.textContent = `Found ${res.questions.length} question(s). Check them, then generate answers.`;
+      // Exact text matches first; the AI fills anything they missed.
+      offerPaperDetails(
+        mergeMeta(detectMeta(text), res.meta),
+        'the question paper'
+      );
     } catch (err) {
       status.textContent = `✗ ${err.message}`;
     } finally {
