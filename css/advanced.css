@@ -425,6 +425,16 @@ body.dark .adv-step > summary .num {
 .fp-row input {
   padding: 8px;
   font-size: 0.82rem;
+  min-width: 0;
+}
+/* Long field names ("Enrollment / Registration no.") end with "…" instead
+   of running under the dropdown arrow. */
+.fp-row select,
+.fp-popover select {
+  padding-right: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .adv-chips {
