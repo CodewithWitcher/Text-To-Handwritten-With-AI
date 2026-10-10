@@ -349,14 +349,20 @@ function placeTermEnd(px, line, lines) {
     .find((w) => /year/i.test(w.text || ''));
   if (!px || !year) return null;
   let best = null;
-  for (let y = Math.round(line.bbox.y0 + h * 0.4); y <= line.bbox.y1 + h * 0.6; y++) {
+  for (
+    let y = Math.round(line.bbox.y0 + h * 0.4);
+    y <= line.bbox.y1 + h * 0.6;
+    y++
+  ) {
     const runs = runsOnRow(px, y, line.bbox.x0, px.W).filter(
       (r) => r.x1 - r.x0 > h * 2.5
     );
     const before = runs.filter((r) => r.x1 <= year.bbox.x0 + h).pop();
     const after = runs.find((r) => r.x0 >= year.bbox.x1 - h);
-    const total = (before ? before.x1 - before.x0 : 0) + (after ? after.x1 - after.x0 : 0);
-    if (before && (!best || total > best.total)) best = { y, before, after, total };
+    const total =
+      (before ? before.x1 - before.x0 : 0) + (after ? after.x1 - after.x0 : 0);
+    if (before && (!best || total > best.total))
+      best = { y, before, after, total };
   }
   if (!best) return null;
   const size = Math.max(14, Math.min(72, h * 1.05));

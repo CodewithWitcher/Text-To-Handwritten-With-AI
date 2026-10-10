@@ -788,3 +788,10 @@ body.dark .adv-step > summary .num {
   flex: 1;
   font-weight: bold;
 }
+/* Destructive action (Clear all): sits apart, in red. */
+.adv .adv-danger {
+  margin-left: auto;
+  color: var(--font-color-delete);
+  border: 1px solid var(--delete-button-borders);
+  background: transparent;
+}

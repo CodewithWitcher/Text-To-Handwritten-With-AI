@@ -109,7 +109,11 @@ export function parseDocument(md) {
     }
     // "[diagram: caption]" or "[diagram: caption | 12]": blank ruled space
     // (default 10 lines) to draw the figure by hand, with the caption below.
-    if ((m = /^\[(?:diagram|figure|fig)\s*:?\s*([^|\]]*?)\s*(?:\|\s*(\d{1,2})\s*)?\]$/i.exec(line))) {
+    if (
+      (m = /^\[(?:diagram|figure|fig)\s*:?\s*([^|\]]*?)\s*(?:\|\s*(\d{1,2})\s*)?\]$/i.exec(
+        line
+      ))
+    ) {
       flushPara();
       blocks.push({
         type: 'diagram',
@@ -121,7 +125,9 @@ export function parseDocument(md) {
       continue;
     }
     // "[image: id]": a figure (see images.mjs), drawn on the page as is.
-    if ((m = /^\[image:\s*([a-z0-9]+)\s*(?:\|\s*([^\]]*?)\s*)?\]$/i.exec(line))) {
+    if (
+      (m = /^\[image:\s*([a-z0-9]+)\s*(?:\|\s*([^\]]*?)\s*)?\]$/i.exec(line))
+    ) {
       flushPara();
       blocks.push({
         type: 'image',
@@ -358,7 +364,9 @@ function renderBlock(block, page, style, { atTop, continued }) {
     im.alt = '';
     // A slight, stable tilt per image, like the handwriting around it.
     const tilt = ((hashRandom(block.id) - 0.5) * 1.2).toFixed(2);
-    im.style.cssText = `width:${w * s}px;height:${ih * s}px;display:block;transform:rotate(${tilt}deg);`;
+    im.style.cssText = `width:${w * s}px;height:${
+      ih * s
+    }px;display:block;transform:rotate(${tilt}deg);`;
     box.append(im);
     node.append(box);
     node.style.textAlign = 'center'; // caption, if any, under the image

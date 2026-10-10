@@ -958,6 +958,33 @@ function initContent() {
     onFrontValuesChanged();
   };
 
+  // Clear all (step 4): empties steps 3 and 4 for the next assignment.
+  // Profile, courses, front page, handwriting and AI settings stay.
+  $('#clear-all').addEventListener('click', () => {
+    if (
+      !window.confirm(
+        'Clear the question paper, all questions and answers (with their images), the final text and the rendered pages?\n\nYour profile, front page and settings are kept. This cannot be undone.'
+      )
+    )
+      return;
+    startNewAssignment();
+    draft.pdfText = '';
+    draft.pdfName = '';
+    draft.pasteText = '';
+    draft.ownText = '';
+    draft.docTextEdited = false;
+    pdfSource = { file: null, base64: null };
+    $('#src-pdf-file').value = '';
+    $('#src-pdf-info').textContent = '';
+    $('#src-paste-text').value = '';
+    $('#own-text').value = '';
+    $('#bulk-answers').value = '';
+    $('#gen-status').textContent = '';
+    saveDraft();
+    clearRenderedPages();
+    toast('Cleared. Ready for the next assignment.', 'success');
+  });
+
   $('#src-pdf-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1219,10 +1246,7 @@ function watchQuestionSizes() {
 
 /** Removes a question's figures and the images inside its answer. */
 function deleteQuestionImages(q) {
-  for (const id of [
-    ...(q.figures || []),
-    ...imageIdsIn(draft.answers[q.id])
-  ])
+  for (const id of [...(q.figures || []), ...imageIdsIn(draft.answers[q.id])])
     deleteImage(id);
 }
 
@@ -1289,7 +1313,10 @@ function renderQuestions() {
       title: 'Copy the figure to paste into a chatbot',
       onclick: async () => {
         if (await copyImagesToClipboard(q.figures || [])) {
-          toast('Figure copied. Paste it into the same chat message.', 'success');
+          toast(
+            'Figure copied. Paste it into the same chat message.',
+            'success'
+          );
         } else {
           toast(
             'This browser blocked copying images. The figure was downloaded instead: attach it in the chat.',
@@ -1311,7 +1338,10 @@ function renderQuestions() {
           docInfo: draft.docInfo
         });
         (await copyText(prompt))
-          ? toast('Prompt text copied. Paste it into the same chat message.', 'success')
+          ? toast(
+              'Prompt text copied. Paste it into the same chat message.',
+              'success'
+            )
           : toast('Copy failed.', 'error');
       }
     });
@@ -1476,7 +1506,10 @@ function renderQuestions() {
                   ink: inkName()
                 });
                 (await copyText(prompt))
-                  ? toast('Diagram prompt copied. Paste it into Gemini or ChatGPT.', 'success')
+                  ? toast(
+                      'Diagram prompt copied. Paste it into Gemini or ChatGPT.',
+                      'success'
+                    )
                   : toast('Copy failed.', 'error');
               }
             }),
@@ -1594,7 +1627,8 @@ function renderQuestions() {
                 type: 'button',
                 text: 'Remove',
                 onclick: () => {
-                  if (!window.confirm('Remove this image from the answer?')) return;
+                  if (!window.confirm('Remove this image from the answer?'))
+                    return;
                   // Back to a blank diagram space if it had a caption.
                   const back = /^Fig:\s*/i.test(ref.caption)
                     ? `[diagram: ${ref.caption.replace(/^Fig:\s*/i, '')}]`
@@ -1674,7 +1708,8 @@ function renderQuestions() {
                 'success'
               );
             }
-            if (!(await copyText(prompt))) return toast('Copy failed.', 'error');
+            if (!(await copyText(prompt)))
+              return toast('Copy failed.', 'error');
             toast(
               figures.length
                 ? 'Prompt copied (this browser can\'t copy text and image together). Paste it, then click "Copy figure" and paste that too.'
@@ -1690,7 +1725,8 @@ function renderQuestions() {
           el('button.adv-small', {
             type: 'button',
             text: 'Split into parts',
-            title: 'Make (a), (b), (c)... separate questions, each with its own answer',
+            title:
+              'Make (a), (b), (c)... separate questions, each with its own answer',
             onclick: () => {
               if (
                 String(draft.answers[q.id] || '').trim() &&
@@ -1746,7 +1782,8 @@ function renderQuestions() {
           el('button.adv-small.q-add-img', {
             type: 'button',
             text: '+ Add figure',
-            title: 'Upload an image, or paste a screenshot into the question box',
+            title:
+              'Upload an image, or paste a screenshot into the question box',
             onclick: () => pickImage(addFigure)
           })
         ]),
@@ -1771,11 +1808,15 @@ function renderQuestions() {
                 );
               }
               // Drop a stray "=== ANSWER 1 ===" marker if the bot added one.
-              reply = reply.replace(/^\s*=+\s*ANSWER\s+\d+\s*=+\s*$/gim, '').trim();
+              reply = reply
+                .replace(/^\s*=+\s*ANSWER\s+\d+\s*=+\s*$/gim, '')
+                .trim();
               if (!reply) return toast('The clipboard is empty.', 'error');
               if (
                 answer.value.trim() &&
-                !window.confirm('Replace the current answer with the pasted one?')
+                !window.confirm(
+                  'Replace the current answer with the pasted one?'
+                )
               )
                 return;
               answer.value = reply;
@@ -1930,6 +1971,17 @@ function composeCurrent() {
     docInfo: draft.docInfo,
     options: { pageBreakBetween: style.pageBreakBetween }
   });
+}
+
+/** Forgets the rendered pages (preview, downloads) of step 4. */
+function clearRenderedPages() {
+  pageEls = [];
+  renderedPages = [];
+  $('#pages-preview').textContent = '';
+  $('#hw-stage').textContent = '';
+  $('#download-pdf').disabled = true;
+  $('#download-images').disabled = true;
+  $('#build-status').textContent = '';
 }
 
 function markStale() {
@@ -2113,10 +2165,11 @@ function outputName() {
     draft.docInfo.title ||
     [
       fieldValue('programmeCode') || fieldValue('course'),
-      fieldValue('semester') && `Semester ${fieldValue('semester')}`.replace(
-        /^Semester\s+(semester|sem)\b\.?\s*/i,
-        'Semester '
-      ),
+      fieldValue('semester') &&
+        `Semester ${fieldValue('semester')}`.replace(
+          /^Semester\s+(semester|sem)\b\.?\s*/i,
+          'Semester '
+        ),
       'Assignment'
     ]
       .filter(Boolean)

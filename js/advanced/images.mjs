@@ -291,7 +291,10 @@ export async function copyImagesToClipboard(ids) {
 }
 
 const escapeHtml = (t) =>
-  t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  t.replace(
+    /[&<>"]/g,
+    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])
+  );
 
 /**
  * Copies a prompt and its figures in one go. The clipboard gets three

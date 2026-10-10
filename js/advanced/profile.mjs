@@ -635,8 +635,8 @@ export function renderProfileForm(container, onChange) {
         f.key === 'date'
           ? 'Leave empty to use today'
           : f.fallback && f.fallback()
-            ? `Leave empty for "${f.fallback()}"`
-            : '',
+          ? `Leave empty for "${f.fallback()}"`
+          : '',
       autocomplete: 'off'
     });
     input.value = profile.values[f.key] || '';

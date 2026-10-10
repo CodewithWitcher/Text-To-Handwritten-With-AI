@@ -208,7 +208,11 @@ export function diagramPrompt({
   withFigure = false
 }) {
   // The answer text around the diagram, so the labels match what's written.
-  const marked = replaceDiagramLine(answer, index, '>>> THE DIAGRAM GOES HERE <<<')
+  const marked = replaceDiagramLine(
+    answer,
+    index,
+    '>>> THE DIAGRAM GOES HERE <<<'
+  )
     .replace(DIAGRAM_LINE_RE, '')
     .trim();
   const at = Math.max(0, marked.indexOf('>>> THE DIAGRAM'));
@@ -222,7 +226,9 @@ export function diagramPrompt({
   return `Create an image: a diagram for a university assignment answer.
 
 Diagram: ${caption}
-${docInfo.subject ? `Subject: ${docInfo.subject}\n` : ''}Question: ${questionForPrompt(question, { forAnswer: false })}
+${
+  docInfo.subject ? `Subject: ${docInfo.subject}\n` : ''
+}Question: ${questionForPrompt(question, { forAnswer: false })}
 ${figure}
 The answer around the diagram (use the same names, values and labels):
 ---
@@ -375,9 +381,7 @@ export function singleCopyPrompt({ question, template, context, docInfo }) {
 
 ${answerUserPrompt({ question, template, context, docInfo })}${
     figures
-      ? `\n\nThe figure${
-          figures > 1 ? 's' : ''
-        } from the question paper ${
+      ? `\n\nThe figure${figures > 1 ? 's' : ''} from the question paper ${
           figures > 1 ? 'are' : 'is'
         } attached as an image. Use it to answer.`
       : ''
@@ -455,7 +459,9 @@ function splitInlineSubparts(line) {
  */
 export function questionLines(text) {
   const out = [];
-  for (const raw of String(text || '').replace(/\r\n/g, '\n').split('\n')) {
+  for (const raw of String(text || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')) {
     const line = raw.trim();
     if (!line) continue;
     if (!out.length || SUBPART_START_RE.test(line)) out.push(line);
@@ -513,7 +519,11 @@ export function splitSubQuestions(questions) {
         marks = m[1];
         text = text.slice(0, m.index).trim();
       }
-      return { label: `(${p[1].replace('¢', 'c').toLowerCase()})`, text, marks };
+      return {
+        label: `(${p[1].replace('¢', 'c').toLowerCase()})`,
+        text,
+        marks
+      };
     });
     const total = parseFloat(q.marks) || 0;
     // "(c) ... (10 Marks)" where 10 is the whole question's total: not (c)'s.
@@ -526,7 +536,8 @@ export function splitSubQuestions(questions) {
       last.marks = '';
     const known = subs.reduce((n, s) => n + (parseFloat(s.marks) || 0), 0);
     const missing = subs.filter((s) => !s.marks).length;
-    const share = missing && total > known ? round1((total - known) / missing) : '';
+    const share =
+      missing && total > known ? round1((total - known) / missing) : '';
     const words = parseFloat(q.wordLimit) || 0;
     subs.forEach((s, i) =>
       out.push({
@@ -594,7 +605,11 @@ export function composeDocument({
       if (template.answerLabel) lines.push(`**${template.answerLabel}**`);
       lines.push(normalizeAnswer(answers[q.id]) || '(answer pending)');
       lines.push('');
-      if (options.pageBreakBetween && i < questions.length - 1 && !sameGroupNext)
+      if (
+        options.pageBreakBetween &&
+        i < questions.length - 1 &&
+        !sameGroupNext
+      )
         lines.push('---');
       return;
     }
