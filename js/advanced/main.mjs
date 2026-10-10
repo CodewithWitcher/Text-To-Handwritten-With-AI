@@ -72,6 +72,7 @@ import { extractBasic, extractWithAI, garbledMath } from './questions.mjs';
 import {
   addImage,
   copyImagesToClipboard,
+  copyTextWithImages,
   deleteImage,
   downloadImages,
   getImage,
@@ -1269,7 +1270,7 @@ function renderQuestions() {
     // Shown only when the question has a figure: the chatbot needs it too.
     const figCaution = el('p.adv-hint.q-fig-caution', {
       text:
-        '⚠ This question has a figure. For a chatbot: click "Copy prompt" and paste it, then click "Copy figure" and paste it into the same message (the chatbot must accept images, e.g. ChatGPT, Claude.ai, Gemini). Then send.'
+        '⚠ This question has a figure. "Copy prompt" copies the prompt and the figure together: paste once into a chatbot that accepts images (ChatGPT, Claude.ai, Gemini) and check the image is attached before sending. If only one of them arrives, use "Copy text only" or "Copy figure" for the missing part.'
     });
     const copyFigBtn = el('button.adv-small', {
       type: 'button',
@@ -1287,10 +1288,27 @@ function renderQuestions() {
         }
       }
     });
+    const copyTextBtn = el('button.adv-small', {
+      type: 'button',
+      text: 'Copy text only',
+      title: 'Copy just the prompt text (if a paste brought only the image)',
+      onclick: async () => {
+        const prompt = singleCopyPrompt({
+          question: q,
+          template: getTemplate(draft.templateId),
+          context: academicContext(),
+          docInfo: draft.docInfo
+        });
+        (await copyText(prompt))
+          ? toast('Prompt text copied. Paste it into the same chat message.', 'success')
+          : toast('Copy failed.', 'error');
+      }
+    });
     const updateFigUI = () => {
       const has = (q.figures || []).length > 0;
       figCaution.hidden = !has;
       copyFigBtn.hidden = !has;
+      copyTextBtn.hidden = !has;
     };
     updateFigUI();
     const renderFigs = async () => {
@@ -1420,16 +1438,25 @@ function renderQuestions() {
               context: academicContext(),
               docInfo: draft.docInfo
             });
+            const figures = q.figures || [];
+            // With a figure: text and image on the clipboard together.
+            if (figures.length && (await copyTextWithImages(prompt, figures))) {
+              return toast(
+                'Prompt and figure copied. Paste once into the chat. If only one of them arrives, use "Copy text only" or "Copy figure" for the missing part.',
+                'success'
+              );
+            }
             if (!(await copyText(prompt))) return toast('Copy failed.', 'error');
             toast(
-              (q.figures || []).length
-                ? 'Prompt copied. Paste it in the chat, then click "Copy figure" and paste that too.'
+              figures.length
+                ? 'Prompt copied (this browser can\'t copy text and image together). Paste it, then click "Copy figure" and paste that too.'
                 : 'Prompt copied. Paste it into your chatbot, then paste its reply with "Paste answer".',
-              'success'
+              figures.length ? 'info' : 'success'
             );
           }
         }),
         copyFigBtn,
+        copyTextBtn,
         !q.group &&
           splitSubQuestions([q]).length > 1 &&
           el('button.adv-small', {

@@ -91,11 +91,8 @@ export async function resolveImageBlocks(blocks) {
   return out;
 }
 
-/**
- * Copies images to the clipboard as one PNG (stacked if several), so they
- * paste into ChatGPT / Claude.ai / Gemini as a single attachment.
- */
-export async function copyImagesToClipboard(ids) {
+/** The images stacked into one PNG canvas (null if none). */
+async function stackImages(ids) {
   const imgs = [];
   for (const id of ids) {
     const entry = await getImage(id);
@@ -105,7 +102,7 @@ export async function copyImagesToClipboard(ids) {
     await img.decode();
     imgs.push(img);
   }
-  if (!imgs.length) return false;
+  if (!imgs.length) return null;
   const gap = 20;
   const c = document.createElement('canvas');
   c.width = Math.max(...imgs.map((i) => i.naturalWidth));
@@ -119,10 +116,68 @@ export async function copyImagesToClipboard(ids) {
     ctx.drawImage(img, 0, y);
     y += img.naturalHeight + gap;
   }
+  return c;
+}
+
+const pngBlob = (canvas) =>
+  new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+
+/**
+ * Copies images to the clipboard as one PNG (stacked if several), so they
+ * paste into ChatGPT / Claude.ai / Gemini as a single attachment.
+ */
+export async function copyImagesToClipboard(ids) {
   try {
-    // Pass a promise so Safari keeps the click's permission while encoding.
-    const png = new Promise((resolve) => c.toBlob(resolve, 'image/png'));
+    // write() runs right away (still inside the click) with the image as a
+    // promise; waiting first makes browsers drop or refuse the copy.
+    const png = stackImages(ids).then((c) => {
+      if (!c) throw new Error('No image');
+      return pngBlob(c);
+    });
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+const escapeHtml = (t) =>
+  t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+
+/**
+ * Copies a prompt and its figures in one go. The clipboard gets three
+ * versions of the same thing and each chat site takes what it supports:
+ * plain text, rich text (HTML with the figure inside) and the image itself.
+ */
+export async function copyTextWithImages(text, ids) {
+  try {
+    // Must be called straight from the click, before any await: write()
+    // starts immediately and the image parts follow as promises. Waiting for
+    // the image first loses the click, and browsers then drop parts of the
+    // copy (e.g. the text).
+    const canvas = stackImages(ids).then((c) => {
+      if (!c) throw new Error('No image');
+      return c;
+    });
+    const html = canvas.then(
+      (c) =>
+        new Blob(
+          [
+            `<div>${escapeHtml(text).replace(
+              /\n/g,
+              '<br>'
+            )}</div><img src="${c.toDataURL('image/png')}" alt="Figure">`
+          ],
+          { type: 'text/html' }
+        )
+    );
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+        'text/html': html,
+        'image/png': canvas.then(pngBlob)
+      })
+    ]);
     return true;
   } catch (e) {
     return false;
