@@ -36,10 +36,41 @@ export const DEFAULT_STYLE = {
 
 /* -------------------------------- Parsing -------------------------------- */
 
+/**
+ * Removes Markdown that has no handwritten equivalent so no stray symbols
+ * reach the page: *italic* / _italic_ become plain text, `code` loses its
+ * backticks, ***x*** and __x__ become **x** (underlined emphasis).
+ * Real asterisks like "2 * 3" or "(3*4= 12 Marks)" are kept.
+ */
+export function cleanInline(text) {
+  const kept = [];
+  const keep = (inner) => `\u0000${kept.push(inner) - 1}\u0000`;
+  let t = String(text)
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\*{3}(\S(?:[^*]*?\S)?)\*{3}/g, (_, x) => keep(x))
+    .replace(/\*\*(\S(?:[^*]*?\S)?)\*\*/g, (_, x) => keep(x))
+    .replace(
+      /(^|[^\w])__(\S(?:[^_]*?\S)?)__(?![\w])/g,
+      (_, a, x) => a + keep(x)
+    );
+  // *italic* and _italic_ -> plain text (no handwritten italics).
+  t = t
+    .replace(/(^|[^\w*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])/g, '$1$2')
+    .replace(/(^|[\s(])_(?=\S)([^_\n]+?)(?<=\S)_(?=[\s.,;:!?)]|$)/g, '$1$2');
+  // Leftover markers: stray "**", or "*" stuck to a word ("*word", "word*").
+  // A "*" between spaces or digits is maths ("2 * 3", "3*4") and stays.
+  t = t
+    .replace(/\*{2,}/g, '')
+    .replace(/(^|\s)\*(?=[A-Za-z])/g, '$1')
+    .replace(/(?<=[A-Za-z.,:;!?)])\*(?=\s|$)/g, '')
+    .replace(/^\s*\*\s+/, '');
+  return t.replace(/\u0000(\d+)\u0000/g, (_, n) => `**${kept[n]}**`);
+}
+
 function tokenize(text) {
   // **emphasis** -> em tokens; everything split into words.
   const tokens = [];
-  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  const parts = cleanInline(text).split(/(\*\*[^*]+\*\*)/g);
   for (const part of parts) {
     if (!part) continue;
     const em = /^\*\*[^*]+\*\*$/.test(part);
