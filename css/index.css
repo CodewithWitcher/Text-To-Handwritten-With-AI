@@ -9,7 +9,7 @@ body {
   --elevation-background: #f3f3f3;
   --link-color: #006eb8;
   --font-family-primary: 'Roboto', Arial;
-  --handwriting-font: 'Homemade Apple', cursive;
+  --handwriting-font: 'QE Dave Mergens', cursive;
   --primary-color: #1a73e8;
   --ink-color: #000f55;
   --label-color: #333;
@@ -37,6 +37,11 @@ body.dark {
 @font-face {
   font-family: 'Hindi_Font';
   src: url(../fonts/Hindi_Type.ttf);
+}
+@font-face {
+  font-family: 'QE Dave Mergens';
+  src: url(../fonts/QEDaveMergens.ttf) format('truetype');
+  font-display: block;
 }
 
 /* Default CSS Changes */

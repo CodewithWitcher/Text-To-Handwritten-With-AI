@@ -64,6 +64,7 @@ import { FrontPageEditor } from './frontpage.mjs';
 import { buildPdf } from './output.mjs';
 
 const BUILTIN_FONTS = [
+  ["'QE Dave Mergens', cursive", 'Dave Mergens'],
   ["'Homemade Apple', cursive", 'Homemade Apple'],
   ["'Caveat', cursive", 'Caveat'],
   ["'Kalam', cursive", 'Kalam'],
@@ -80,6 +81,7 @@ const BUILTIN_FONTS = [
 
 // Sensible starting sizes per font (they differ a lot in visual size).
 const FONT_SIZE_HINT = {
+  'Dave Mergens': 20,
   'Homemade Apple': 14,
   Caveat: 20,
   Kalam: 16,
@@ -110,6 +112,15 @@ export async function init() {
   initialized = true;
 
   style = { ...DEFAULT_STYLE, pageBreakBetween: false, ...load('style', {}) };
+  // One-time switch to the new default font for settings saved before it existed.
+  if (!style.defaultFontV2) {
+    if (style.font === "'Homemade Apple', cursive") {
+      style.font = DEFAULT_STYLE.font;
+      style.fontSize = DEFAULT_STYLE.fontSize;
+    }
+    style.defaultFontV2 = true;
+    saveStyle();
+  }
   draft = {
     source: 'pdf',
     templateId: BUILTIN_TEMPLATES[0].id,

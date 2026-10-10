@@ -441,9 +441,27 @@ function splitToFit(ctx, text, width) {
  * Works out exactly where an item's text goes (shared by drawing and the
  * drag handles): [{ text, x, y, size, align }]
  */
+/**
+ * Handwriting fonts draw very different letter sizes at the same px size.
+ * Scale each font so its lowercase letters (x-height, which most text is)
+ * look about as big as printed form text. Cached once the font is loaded.
+ */
+const TARGET_X_HEIGHT = 48; // per 100px; printed Calibri/Arial are ~50-52
+const fontScaleCache = new Map();
+function fontScale(ctx, font) {
+  if (fontScaleCache.has(font)) return fontScaleCache.get(font);
+  ctx.font = `100px ${font}`;
+  const x = ctx.measureText('x').actualBoundingBoxAscent || TARGET_X_HEIGHT;
+  const scale = Math.min(1.6, Math.max(0.85, TARGET_X_HEIGHT / x));
+  const family = font.split(',')[0].trim();
+  if (document.fonts.check(`100px ${family}`)) fontScaleCache.set(font, scale);
+  return scale;
+}
+
 export function layoutItem(ctx, item, text, font) {
   const out = [];
-  let size = item.size;
+  const base = item.size * fontScale(ctx, font);
+  let size = base;
   const setFont = (s) => (ctx.font = `${s}px ${font}`);
   setFont(size);
 
@@ -488,7 +506,7 @@ export function layoutItem(ctx, item, text, font) {
     }
   }
   // Shrink to fit the blank (not below 65%).
-  while (size > item.size * 0.65 && ctx.measureText(text).width > maxW) {
+  while (size > base * 0.65 && ctx.measureText(text).width > maxW) {
     size -= 1;
     setFont(size);
   }
@@ -719,7 +737,14 @@ export class FrontPageEditor {
     if (!this.img) return this.refreshEmpty();
     $('#fp-editor', this.root).hidden = false;
     $('#fp-empty', this.root).hidden = true;
-    drawFrontPage(this.canvas, this.img, this.state.items, this.getStyle());
+    const style = this.getStyle();
+    drawFrontPage(this.canvas, this.img, this.state.items, style);
+    // Redraw once the handwriting font has loaded (sizes depend on it).
+    this.fontWaits = this.fontWaits || new Set();
+    if (!this.fontWaits.has(style.font)) {
+      this.fontWaits.add(style.font);
+      document.fonts.load(`40px ${style.font}`).then(() => this.redraw());
+    }
     this.renderList();
     this.positionHandles();
     this.renderSaved();

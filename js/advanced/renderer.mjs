@@ -13,8 +13,8 @@ export const PAGE_W = 620;
 export const PAGE_H = Math.round((PAGE_W * 297) / 210); // A4 ratio
 
 export const DEFAULT_STYLE = {
-  font: "'Homemade Apple', cursive",
-  fontSize: 15,
+  font: "'QE Dave Mergens', cursive",
+  fontSize: 20,
   lineHeight: 28,
   inkBody: '#000f55',
   inkHeading: '#000000',

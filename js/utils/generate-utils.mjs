@@ -9,10 +9,8 @@ function isFontErrory() {
   const currentHandwritingFont = document.body.style.getPropertyValue(
     '--handwriting-font'
   );
-  return (
-    currentHandwritingFont === '' ||
-    currentHandwritingFont.includes('Homemade Apple')
-  );
+  // '' means the default font (QE Dave Mergens), which needs no correction.
+  return currentHandwritingFont.includes('Homemade Apple');
 }
 
 function applyPaperStyles() {
