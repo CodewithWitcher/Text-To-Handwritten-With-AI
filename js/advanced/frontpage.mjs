@@ -81,10 +81,10 @@ const LABEL_SUFFIX = /^(no|number|num|id|i|d|td|ld|1d)$/;
 
 // Labels that end the previous field but are never filled automatically.
 const STOP_LABELS = [
-  'signature of the student',
-  'signature of student',
-  'student signature',
   'signature',
+  // IGNOU RC Delhi-3: the second line of a label, not a blank of its own.
+  'with complete address',
+  'been submitted anywhere else also',
   'sign',
   'seal',
   'stamp'
@@ -174,7 +174,13 @@ function findLabels(line, dict) {
       filled: rest.replace(/^(no|id)/, '').length >= 4
     };
   });
-  return result.filter((m) => m.key !== null);
+  // "June/December-____(Year)____": the "(Year)" caption belongs to the
+  // exam blank, it isn't a Semester/Year field.
+  return result.filter(
+    (m, idx) =>
+      m.key !== null &&
+      !(m.key === 'semester' && result[idx - 1]?.key === 'termEndExam')
+  );
 }
 
 /* ---- Pixel helpers: find the printed underline of each blank ---- */
@@ -275,7 +281,102 @@ function findContinuation(px, line, underline, lines) {
   return null;
 }
 
+/**
+ * x of the ":" that follows a label on the same row, if any. Forms often line
+ * the colons up in a column far from the label, and OCR may put that column
+ * in a line of its own, so look at every line on this row.
+ */
+function colonAfter(line, match, lines) {
+  const h = line.bbox.y1 - line.bbox.y0;
+  const mid = (line.bbox.y0 + line.bbox.y1) / 2;
+  const limit = match.nextX === Infinity ? Infinity : match.nextX;
+  let best = null;
+  for (const l of lines) {
+    if (Math.abs((l.bbox.y0 + l.bbox.y1) / 2 - mid) > h * 0.6) continue;
+    for (const w of l.words) {
+      const t = String(w.text || '');
+      const k = t.indexOf(':');
+      if (k < 0) continue;
+      const x = w.bbox.x0 + ((w.bbox.x1 - w.bbox.x0) * (k + 1)) / t.length;
+      if (x < match.endX - h * 0.5 || x > limit) continue;
+      // Text after the colon (e.g. "Date:10/10/2026") means it's filled.
+      if (t.slice(k + 1).replace(/[^a-z0-9]/gi, '').length > 2) continue;
+      if (best === null || x < best) best = x;
+    }
+  }
+  return best;
+}
+
+/** The next OCR line below `line`, if it's close (a label's second line). */
+function lineBelow(line, lines) {
+  const h = line.bbox.y1 - line.bbox.y0;
+  return lines.find(
+    (l) =>
+      l !== line &&
+      l.bbox.y0 > line.bbox.y1 - h * 0.2 &&
+      l.bbox.y0 < line.bbox.y1 + h * 1.6 &&
+      l.bbox.x0 < line.bbox.x0 + h * 4
+  );
+}
+
+// Second lines of labels whose value may continue next to them.
+const CONTINUATION_LINES = ['withcompleteaddress', 'completeaddress'];
+
+function placeSignature(line, match) {
+  const h = Math.max(10, line.bbox.y1 - line.bbox.y0);
+  const width = match.endX - match.startX;
+  // Written just above "(Signature of the student)", a bit larger than fields.
+  return {
+    x: match.startX + width * 0.1,
+    y: line.bbox.y0 - h * 0.35,
+    size: Math.max(18, Math.min(90, h * 1.5)),
+    maxWidth: width * 1.1,
+    keepSize: true
+  };
+}
+
+/**
+ * "June/December-______(Year)______": month in the first blank, year in the
+ * one after "(Year)". OCR boxes here include the underline, so find the
+ * blanks from the pixels around the "(Year)" word instead.
+ */
+function placeTermEnd(px, line, lines) {
+  const h = Math.max(10, line.bbox.y1 - line.bbox.y0);
+  const mid = (line.bbox.y0 + line.bbox.y1) / 2;
+  const year = lines
+    .filter((l) => Math.abs((l.bbox.y0 + l.bbox.y1) / 2 - mid) < h * 0.6)
+    .flatMap((l) => l.words)
+    .find((w) => /year/i.test(w.text || ''));
+  if (!px || !year) return null;
+  let best = null;
+  for (let y = Math.round(line.bbox.y0 + h * 0.4); y <= line.bbox.y1 + h * 0.6; y++) {
+    const runs = runsOnRow(px, y, line.bbox.x0, px.W).filter(
+      (r) => r.x1 - r.x0 > h * 2.5
+    );
+    const before = runs.filter((r) => r.x1 <= year.bbox.x0 + h).pop();
+    const after = runs.find((r) => r.x0 >= year.bbox.x1 - h);
+    const total = (before ? before.x1 - before.x0 : 0) + (after ? after.x1 - after.x0 : 0);
+    if (before && (!best || total > best.total)) best = { y, before, after, total };
+  }
+  if (!best) return null;
+  const size = Math.max(14, Math.min(72, h * 1.05));
+  const baseline = best.y - Math.max(2, h * 0.12);
+  const slot = (r) => ({ x: (r.x0 + r.x1) / 2, y: baseline, w: r.x1 - r.x0 });
+  return {
+    x: best.before.x0 + size * 0.25,
+    y: baseline,
+    size,
+    maxWidth: best.before.x1 - best.before.x0,
+    ...(best.after && { parts: [slot(best.before), slot(best.after)] })
+  };
+}
+
 function placeField(px, line, match, lines) {
+  if (match.key === 'signature') return placeSignature(line, match);
+  if (match.key === 'termEndExam') {
+    const term = placeTermEnd(px, line, lines);
+    if (term) return term;
+  }
   const h = Math.max(10, line.bbox.y1 - line.bbox.y0);
   const size = Math.max(14, Math.min(72, h * 1.05));
   const under =
@@ -307,17 +408,27 @@ function placeField(px, line, match, lines) {
     }
     return item;
   }
-  // No printed blank (e.g. "Name:" followed by empty space): write after the label.
-  return {
-    x: match.endX + size * 0.45,
-    y: line.bbox.y1 - h * 0.18,
-    size,
-    maxWidth:
-      (match.nextX === Infinity
-        ? (px ? px.W : 2000) * 0.95
-        : match.nextX - size) -
-      (match.endX + size * 0.45)
-  };
+  // No printed blank (e.g. "Name  :" followed by empty space): write after
+  // the colon if there is one, otherwise after the label.
+  const colon = colonAfter(line, match, lines);
+  const x = (colon ?? match.endX) + size * 0.45;
+  const right =
+    match.nextX === Infinity ? (px ? px.W : 2000) * 0.95 : match.nextX - size;
+  const item = { x, y: line.bbox.y1 - h * 0.18, size, maxWidth: right - x };
+  // "Name of the Study Centre :" / "With complete address": long values
+  // continue on the second line, under the first.
+  const below = lineBelow(line, lines);
+  if (
+    below &&
+    CONTINUATION_LINES.some((c) => compact(below.text).startsWith(c))
+  ) {
+    item.wrap = {
+      x,
+      y: below.bbox.y1 - h * 0.18,
+      maxWidth: right - x
+    };
+  }
+  return item;
 }
 
 export function detectFromLines(lines, px) {
@@ -341,9 +452,12 @@ export function detectFromLines(lines, px) {
 /** Use one text size for all fields (the median), like a real hand would. */
 function harmonizeSizes(items) {
   if (items.length < 2) return items;
-  const sizes = items.map((i) => i.size).sort((a, b) => a - b);
+  const sizes = items
+    .filter((i) => !i.keepSize)
+    .map((i) => i.size)
+    .sort((a, b) => a - b);
   const median = sizes[Math.floor(sizes.length / 2)];
-  return items.map((i) => ({ ...i, size: median }));
+  return items.map((i) => (i.keepSize ? i : { ...i, size: median }));
 }
 
 async function detectWithAI(lines, imageDataUrl, provider, px) {
@@ -356,7 +470,8 @@ async function detectWithAI(lines, imageDataUrl, provider, px) {
         'You map the blank fields on a university/college assignment front page to student profile fields. ' +
         'Only include labels that are followed by a blank to fill in (e.g. "Name: ____", "Roll No. ......"). ' +
         'OCR often drops the underscores and merges words, so "ProgrammeCode" alone on a line is still a blank field. ' +
-        'Ignore headings, the university name printed as a title, logos, instructions and "Signature".',
+        'Ignore headings, the university name printed as a title, logos and instructions. ' +
+        'Map the student\'s own signature label (e.g. "(Signature of the student)") to signature; ignore other signatures.',
       prompt:
         `Profile fields (key = meaning):\n${fieldList}\nother = a blank that matches none of the above\n\n` +
         `OCR lines of the front page:\n${listing}\n\n` +
@@ -466,7 +581,10 @@ export function layoutItem(ctx, item, text, font) {
   setFont(size);
 
   if (item.parts && item.parts.length) {
-    const pieces = text.split(/\s*[/\-.]\s*/).filter(Boolean);
+    let pieces = text.split(/\s*[/\-.]\s*/).filter(Boolean);
+    // "December 2026" -> month and year slots.
+    if (pieces.length !== item.parts.length)
+      pieces = text.split(/\s+/).filter(Boolean);
     if (pieces.length === item.parts.length) {
       pieces.forEach((p, i) =>
         out.push({
@@ -529,7 +647,16 @@ function drawFrontPage(canvas, img, items, style) {
     for (const piece of layoutItem(ctx, item, text, style.font)) {
       ctx.font = `${piece.size}px ${style.font}`;
       ctx.textAlign = piece.align;
-      ctx.fillText(piece.text, piece.x, piece.y);
+      if (item.key === 'signature') {
+        // Slanted, like a signature rather than form filling.
+        ctx.save();
+        ctx.translate(piece.x, piece.y);
+        ctx.transform(1, 0, -0.28, 1, 0, 0);
+        ctx.fillText(piece.text, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.fillText(piece.text, piece.x, piece.y);
+      }
     }
   }
   ctx.textAlign = 'left';

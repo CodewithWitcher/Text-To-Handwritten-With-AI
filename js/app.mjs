@@ -122,7 +122,7 @@ const EVENT_MAP = {
   '#download-as-pdf-button': {
     on: 'click',
     action: () => {
-      downloadAsPDF();
+      downloadAsPDF().catch((err) => alert(err.message));
     }
   },
   '#delete-all-button': {

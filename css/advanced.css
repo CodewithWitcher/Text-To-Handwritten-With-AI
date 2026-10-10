@@ -305,7 +305,38 @@ body.dark .adv-step > summary .num {
 }
 .q-text {
   font-weight: bold;
-  margin-bottom: 8px;
+}
+.q-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  align-items: start;
+}
+.q-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.q-label {
+  font-size: 0.78rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--label-color);
+}
+.q-body textarea {
+  min-height: 140px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .q-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .q-body textarea {
+    min-height: 80px;
+  }
 }
 
 /* Front page */

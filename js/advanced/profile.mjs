@@ -165,6 +165,43 @@ export const PROFILE_FIELDS = [
     ]
   },
   {
+    key: 'studyCentreName',
+    label: 'Study centre name & address',
+    labels: [
+      'name of the study centre',
+      'name of the study center',
+      'name of study centre',
+      'name of study center',
+      'study centre name',
+      'study center name'
+    ]
+  },
+  {
+    key: 'termEndExam',
+    label: 'Term end exam (e.g. December 2026)',
+    labels: ['june december', 'term end exam'],
+    fallback: () => {
+      const d = new Date();
+      return `${d.getMonth() < 6 ? 'June' : 'December'} ${d.getFullYear()}`;
+    }
+  },
+  {
+    key: 'submittedElsewhere',
+    label: 'Submitted anywhere else? (details)',
+    labels: [
+      'details if this same assignment has',
+      'same assignment has been submitted',
+      'submitted anywhere else'
+    ],
+    fallback: () => 'No'
+  },
+  {
+    key: 'infoCorrect',
+    label: 'Information is correct (Yes/No)',
+    labels: ['it is correct yes no', 'is correct yes no'],
+    fallback: () => 'Yes'
+  },
+  {
     key: 'subject',
     label: 'Subject / Course title',
     labels: [
@@ -210,6 +247,17 @@ export const PROFILE_FIELDS = [
     key: 'assignmentTitle',
     label: 'Assignment title / topic',
     labels: ['assignment title', 'title of assignment', 'topic', 'title']
+  },
+  {
+    key: 'signature',
+    label: 'Signature (how you sign your name)',
+    labels: [
+      'signature of the student',
+      'signature of student',
+      'student s signature',
+      'student signature'
+    ],
+    fallback: () => getProfile().values.name || ''
   },
   {
     key: 'date',
@@ -345,7 +393,9 @@ export function fieldValue(key, profile = getProfile()) {
     const c = profile.custom.find((x) => `custom:${x.id}` === key);
     return c ? c.value || '' : '';
   }
-  return profile.values[key] || '';
+  if (profile.values[key]) return profile.values[key];
+  const f = PROFILE_FIELDS.find((x) => x.key === key);
+  return f && f.fallback ? f.fallback() : '';
 }
 
 /** Short context string for AI prompts (only non-identifying academic info). */
@@ -581,7 +631,12 @@ export function renderProfileForm(container, onChange) {
     const input = el('input', {
       id,
       type: f.key === 'email' ? 'email' : 'text',
-      placeholder: f.key === 'date' ? 'Leave empty to use today' : '',
+      placeholder:
+        f.key === 'date'
+          ? 'Leave empty to use today'
+          : f.fallback && f.fallback()
+            ? `Leave empty for "${f.fallback()}"`
+            : '',
       autocomplete: 'off'
     });
     input.value = profile.values[f.key] || '';

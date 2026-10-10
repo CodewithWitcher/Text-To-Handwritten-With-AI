@@ -250,6 +250,7 @@ function initStyle() {
   bind('margin');
   bind('pageHeader');
   bind('pageNumbers');
+  bind('pageFooter');
   bind('pageBreakBetween');
   bind('paragraphGap', num);
   bind('effect');
@@ -339,6 +340,7 @@ const renderStylePreview = debounce(async () => {
   const stage = $('#hw-stage');
   const [page] = paginate(sample, style, stage, {
     headerText: headerText(),
+    footerText: footerText(),
     maxPages: 1
   });
   box.textContent = '';
@@ -360,6 +362,12 @@ function headerText() {
   return [p.name, p.rollNo && `Roll No. ${p.rollNo}`]
     .filter(Boolean)
     .join('  |  ');
+}
+
+function footerText() {
+  const p = getProfile().values;
+  const no = p.enrollmentNo || p.rollNo;
+  return [p.name, no && `Enrolment No. ${no}`].filter(Boolean).join('  |  ');
 }
 
 /* -------------------------------- Profile -------------------------------- */
@@ -902,10 +910,32 @@ function initContent() {
       '#src-pdf-info'
     ).textContent = `Last paper: ${draft.pdfName} (text kept). Upload again to use AI PDF reading.`;
 
+  /**
+   * A new paper is a new assignment: drop everything from the previous one
+   * (questions, answers, title/subject/instructions, course code etc. taken
+   * from the old paper). The profile, courses and front page layout stay.
+   */
+  const startNewAssignment = () => {
+    draft.questions = [];
+    draft.answers = {};
+    draft.docText = '';
+    if ($('#doc-text')) $('#doc-text').value = '';
+    draft.docInfo = { title: '', subject: '', instructions: '' };
+    for (const key of ['title', 'subject', 'instructions'])
+      $(`#doc-${key}`).value = '';
+    clearAssignmentValues();
+    lastOffered = '';
+    $('#find-status').textContent = '';
+    saveDraft();
+    renderQuestions();
+    onFrontValuesChanged();
+  };
+
   $('#src-pdf-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const info = $('#src-pdf-info');
+    startNewAssignment();
     try {
       if (/\.txt$/i.test(file.name) || file.type === 'text/plain') {
         draft.pdfText = await readFileAs(file, 'text');
@@ -949,8 +979,9 @@ function initContent() {
   const applyExtraction = (res) => {
     draft.questions = res.questions;
     draft.answers = {};
+    // The paper's own title/subject/instructions win over older values.
     for (const key of ['title', 'subject', 'instructions']) {
-      if (res[key] && !draft.docInfo[key]) {
+      if (res[key]) {
         draft.docInfo[key] = res[key];
         $(`#doc-${key}`).value = res[key];
       }
@@ -1104,6 +1135,32 @@ function initContent() {
   renderQuestions();
 }
 
+/** Grows a textarea to show all its text (capped by CSS max-height). */
+function autoGrow(t) {
+  if (!t.isConnected || !t.offsetParent) return;
+  t.style.height = 'auto';
+  t.style.height = `${t.scrollHeight + 2}px`;
+}
+
+function growAllQuestions() {
+  document
+    .querySelectorAll('#questions-list textarea')
+    .forEach((t) => autoGrow(t));
+}
+
+let growListeners = false;
+function watchQuestionSizes() {
+  if (growListeners) return;
+  growListeners = true;
+  // Closed <details> have no size; text wraps differently after a resize.
+  $('#step-content')?.addEventListener('toggle', growAllQuestions);
+  let timer;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(growAllQuestions, 150);
+  });
+}
+
 function renderQuestions() {
   const list = $('#questions-list');
   if (!list) return;
@@ -1158,9 +1215,11 @@ function renderQuestions() {
     bindQ(marks, 'marks');
     bindQ(words, 'wordLimit');
     bindQ(text, 'text');
+    text.addEventListener('input', () => autoGrow(text));
     answer.addEventListener('input', () => {
       draft.answers[q.id] = answer.value;
       saveDraft();
+      autoGrow(answer);
     });
 
     const card = el('div.q-card', { dataset: { id: q.id } }, [
@@ -1203,12 +1262,17 @@ function renderQuestions() {
           }
         })
       ]),
-      text,
-      answer,
+      // Side by side on wide screens, stacked on narrow ones.
+      el('div.q-body', {}, [
+        el('div.q-col', {}, [el('span.q-label', { text: 'Question' }), text]),
+        el('div.q-col', {}, [el('span.q-label', { text: 'Answer' }), answer])
+      ]),
       status
     ]);
     list.append(card);
   });
+  watchQuestionSizes();
+  requestAnimationFrame(growAllQuestions);
   refreshAIAvailability();
 }
 
@@ -1272,6 +1336,7 @@ async function generateAnswers(onlyMissing, subset) {
           saveDraft();
           if (card) {
             $('.q-answer', card).value = draft.answers[q.id];
+            autoGrow($('.q-answer', card));
             $('.q-gen', card).textContent = 'Regenerate';
           }
           if (qStatus)
@@ -1397,7 +1462,8 @@ function initBuild() {
       status.textContent = 'Laying out pages…';
       await sleep(20);
       pageEls = paginate(blocks, style, $('#hw-stage'), {
-        headerText: headerText()
+        headerText: headerText(),
+        footerText: footerText()
       });
       showPreview(pageEls);
       renderedPages = [];
@@ -1450,10 +1516,14 @@ function initBuild() {
           .replace(/[^\w\- ]+/g, '')
           .trim()
           .replace(/\s+/g, '-') || 'assignment';
-      await buildPdf({ frontPage: front, pages, filename: `${name}.pdf` });
+      const bytes = await buildPdf({
+        frontPage: front,
+        pages,
+        filename: `${name}.pdf`
+      });
       status.textContent = `PDF downloaded (${
         pages.length + (front ? 1 : 0)
-      } pages).`;
+      } pages, ${(bytes / 1024 / 1024).toFixed(1)} MB).`;
     } catch (err) {
       status.textContent = `✗ ${err.message}`;
     } finally {

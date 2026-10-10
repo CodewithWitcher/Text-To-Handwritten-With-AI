@@ -31,6 +31,7 @@ export const DEFAULT_STYLE = {
   textOffset: 0,
   pageHeader: true,
   pageNumbers: true,
+  pageFooter: false,
   headerText: ''
 };
 
@@ -312,7 +313,7 @@ function renderBlock(block, page, style, { atTop, continued }) {
   return node;
 }
 
-function decoratePage(page, style, total, headerText) {
+function decoratePage(page, style, total, headerText, footerText) {
   const g = page.g;
   if (style.pageHeader && headerText) {
     const head = document.createElement('div');
@@ -324,6 +325,18 @@ function decoratePage(page, style, total, headerText) {
       style.inkBody
     };text-align:right;white-space:nowrap;overflow:hidden;`;
     page.el.append(head);
+  }
+  // Name & enrolment no. at the bottom of every page (IGNOU asks for this).
+  if (style.pageFooter && footerText) {
+    const foot = document.createElement('div');
+    foot.textContent = footerText;
+    foot.style.cssText = `position:absolute;left:${g.left}px;right:${
+      g.right + (style.pageNumbers ? g.L * 2 : 0)
+    }px;bottom:${Math.round(g.L * 0.15)}px;
+      font-size:${style.fontSize * 0.85}px;line-height:${g.L}px;color:${
+      style.inkBody
+    };white-space:nowrap;overflow:hidden;`;
+    page.el.append(foot);
   }
   if (style.pageNumbers) {
     const num = document.createElement('div');
@@ -356,7 +369,7 @@ export function paginate(
   blocks,
   style,
   stage,
-  { headerText = '', maxPages = 200 } = {}
+  { headerText = '', footerText = '', maxPages = 200 } = {}
 ) {
   stage.textContent = '';
   const pages = [];
@@ -456,7 +469,9 @@ export function paginate(
   if (page.content.children.length || !pages.length) pages.push(page);
   else page.el.remove();
 
-  pages.forEach((p) => decoratePage(p, style, pages.length, headerText));
+  pages.forEach((p) =>
+    decoratePage(p, style, pages.length, headerText, footerText)
+  );
   return pages.map((p) => p.el);
 }
 

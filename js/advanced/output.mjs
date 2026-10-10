@@ -2,6 +2,7 @@
  * Assembles the final PDF: optional front page first, then handwritten pages.
  */
 import { ensureJsPDF } from './loaders.mjs';
+import { saveUnderLimit } from '../utils/pdf-size.mjs';
 
 function imageSize(dataUrl) {
   return new Promise((resolve, reject) => {
@@ -18,30 +19,38 @@ export async function buildPdf({
   filename = 'assignment.pdf'
 }) {
   const JsPDF = await ensureJsPDF();
-  // eslint-disable-next-line new-cap
-  const doc = new JsPDF('p', 'pt', 'a4');
-  const ps = doc.internal.pageSize;
-  const W = ps.getWidth ? ps.getWidth() : ps.width;
-  const H = ps.getHeight ? ps.getHeight() : ps.height;
-
   const all = [...(frontPage ? [frontPage] : []), ...pages];
-  for (let i = 0; i < all.length; i++) {
-    if (i > 0) doc.addPage();
-    const { w, h } = await imageSize(all[i]);
-    // Fit inside A4 keeping aspect ratio, centered.
-    const scale = Math.min(W / w, H / h);
-    const dw = w * scale;
-    const dh = h * scale;
-    doc.addImage(
-      all[i],
-      'JPEG',
-      (W - dw) / 2,
-      (H - dh) / 2,
-      dw,
-      dh,
-      `page-${i}`,
-      'FAST'
-    );
-  }
-  doc.save(filename);
+  // Shrinking keeps each page's aspect ratio, so measure the originals once.
+  const sizes = [];
+  for (const src of all) sizes.push(await imageSize(src));
+  return saveUnderLimit(
+    all,
+    (images) => {
+      // eslint-disable-next-line new-cap
+      const doc = new JsPDF('p', 'pt', 'a4');
+      const ps = doc.internal.pageSize;
+      const W = ps.getWidth ? ps.getWidth() : ps.width;
+      const H = ps.getHeight ? ps.getHeight() : ps.height;
+      images.forEach((img, i) => {
+        if (i > 0) doc.addPage();
+        const { w, h } = sizes[i];
+        // Fit inside A4 keeping aspect ratio, centered.
+        const scale = Math.min(W / w, H / h);
+        const dw = w * scale;
+        const dh = h * scale;
+        doc.addImage(
+          img,
+          'JPEG',
+          (W - dw) / 2,
+          (H - dh) / 2,
+          dw,
+          dh,
+          `page-${i}`,
+          'FAST'
+        );
+      });
+      return doc;
+    },
+    filename
+  );
 }

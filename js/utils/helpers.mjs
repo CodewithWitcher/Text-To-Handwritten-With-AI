@@ -1,3 +1,6 @@
+import { saveUnderLimit } from './pdf-size.mjs';
+
+
 const pageEl = document.querySelector('.page-a');
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -20,26 +23,17 @@ function addFontFromFile(fileObj) {
  * Creates PDF from list of given images
  */
 function createPDF(imgs) {
-  // eslint-disable-next-line new-cap
-  const doc = new jsPDF('p', 'pt', 'a4');
-  const width = doc.internal.pageSize.width;
-  const height = doc.internal.pageSize.height;
-  for (const i in imgs) {
-    doc.text(10, 20, '');
-    doc.addImage(
-      imgs[i],
-      'JPEG',
-      25,
-      50,
-      width - 50,
-      height - 80,
-      'image-' + i
-    );
-    if (i != imgs.length - 1) {
-      doc.addPage();
-    }
-  }
-  doc.save();
+  return saveUnderLimit(imgs, (images) => {
+    // eslint-disable-next-line new-cap
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const width = doc.internal.pageSize.width;
+    const height = doc.internal.pageSize.height;
+    images.forEach((img, i) => {
+      if (i > 0) doc.addPage();
+      doc.addImage(img, 'JPEG', 25, 50, width - 50, height - 80, 'image-' + i);
+    });
+    return doc;
+  });
 }
 
 function formatText(event) {
